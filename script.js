@@ -33,17 +33,17 @@ function renderProducts(products) {
     return;
   }
 
-products.forEach(p => {
+  products.forEach(p => {
     const title = p.title || "Untitled";
     const body = p.body || "No description available.";
     const price = p.start_price || "N/A";
 
-    // Round stock to whole number properly
+    // Convert stock to number and round to integer
     let stock = "N/A";
     if (p.stock_amount) {
-        const stockNum = Number(p.stock_amount); // Convert string to number
+        const stockNum = parseFloat(p.stock_amount);
         if (!isNaN(stockNum)) {
-            stock = Math.round(stockNum); // Round to nearest integer
+            stock = Math.round(stockNum).toString(); // Force string without decimals
         }
     }
 
@@ -56,5 +56,5 @@ products.forEach(p => {
       <em>Stock: ${stock}</em>
     `;
     container.appendChild(div);
-});
+  });
 }
