@@ -39,24 +39,6 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
-/* Visit counter (localStorage) */
-function incrementVisitCount() {
-  try {
-    const key = "rcb_visit_count";
-    const raw = localStorage.getItem(key);
-    let n = raw ? parseInt(raw, 10) : 0;
-    if (isNaN(n)) n = 0;
-    n++;
-    localStorage.setItem(key, String(n));
-    const el = document.getElementById("visit-count");
-    if (el) el.textContent = `Visits: ${n}`;
-  } catch (err) {
-    // localStorage may be blocked; silently ignore
-    const el = document.getElementById("visit-count");
-    if (el) el.textContent = `Visits: —`;
-  }
-}
-
 /* Compute total stock and show */
 function computeAndShowTotalStock(dataArray) {
   let total = 0;
