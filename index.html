@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Re-collectibles Bookshop</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- Top Header -->
@@ -21,8 +21,12 @@
   <!-- Search -->
   <input type="text" id="search" placeholder="Search books and press Enter...">
 
-  <!-- Featured Section -->
-  <div id="featured-list" class="featured"></div>
+  <!-- Featured wrapper (sticky) -->
+  <div id="featured-wrapper">
+    <div id="featured-list" class="featured"></div>
+    <!-- expanded content will be injected here so it sits *below* featured row -->
+    <div id="expanded-container"></div>
+  </div>
 
   <!-- Product List -->
   <div id="product-list"></div>
