@@ -1,4 +1,6 @@
-// Load the CSV and display products
+let top300 = []; // keep in global scope
+let featuredInterval;
+
 Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   download: true,
   header: true,
@@ -19,34 +21,53 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
     data.sort((a, b) => b.start_price - a.start_price);
 
     // Take top 300
-    let top300 = data.slice(0, 300);
+    top300 = data.slice(0, 300);
 
     // Shuffle randomly
     top300 = top300.sort(() => Math.random() - 0.5);
 
-    // Pick 5 featured books
-    let featured = top300.slice(0, 5);
+    // Pick first featured
+    updateFeatured();
 
-    // Render featured + main list
-    renderProducts(featured, "featured-list");
+    // Start auto-rotation every 30s
+    featuredInterval = setInterval(updateFeatured, 30000);
+
+    // Render all 300 below featured
     renderProducts(top300, "product-list");
 
-    // Search only within top300
+    // Search within 300
     document.getElementById("search").addEventListener("input", (e) => {
       const query = e.target.value.trim().toLowerCase();
-
       const filtered = top300.filter(item => {
         const title = (item.title || "").toLowerCase();
         const body = (item.body || "").toLowerCase();
         return title.includes(query) || body.includes(query);
       });
-
       renderProducts(filtered, "product-list");
     });
   }
 });
 
-// Reusable render function
+// Fade + refresh featured books
+function updateFeatured() {
+  const featuredContainer = document.getElementById("featured-list");
+
+  // Fade out
+  featuredContainer.classList.add("fade-out");
+
+  setTimeout(() => {
+    // Pick 5 random from top300
+    let shuffled = [...top300].sort(() => Math.random() - 0.5);
+    let featured = shuffled.slice(0, 5);
+
+    renderProducts(featured, "featured-list");
+
+    // Fade in
+    featuredContainer.classList.remove("fade-out");
+  }, 1000); // match CSS fade duration
+}
+
+// Render function
 function renderProducts(products, containerId = "product-list") {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
@@ -58,10 +79,9 @@ function renderProducts(products, containerId = "product-list") {
 
   products.forEach(p => {
     const title = p.title || "Untitled";
-    const body = p.body || "No description available.";
-    const price = (p.start_price && !isNaN(p.start_price)) ? p.start_price.toFixed(2) : "N/A";
+    const body = p.body || "";
+    const price = (p.start_price && !isNaN(p.start_price)) ? `$${p.start_price.toFixed(2)}` : "N/A";
 
-    // Stock formatting
     let stock = "N/A";
     if (p.stock_amount) {
       const stockNum = parseFloat(p.stock_amount);
@@ -74,9 +94,9 @@ function renderProducts(products, containerId = "product-list") {
     div.className = "product";
     div.innerHTML = `
       <h2>${title}</h2>
-      <p>${body}</p>
-      <strong>Price: $${price}</strong><br>
-      <em>Stock: ${stock}</em>
+      ${containerId !== "featured-list" ? `<p>${body}</p>` : ""}
+      <strong>${price}</strong><br>
+      ${containerId !== "featured-list" ? `<em>Stock: ${stock}</em>` : ""}
     `;
     container.appendChild(div);
   });
