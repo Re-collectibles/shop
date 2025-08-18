@@ -37,11 +37,14 @@ products.forEach(p => {
     const title = p.title || "Untitled";
     const body = p.body || "No description available.";
     const price = p.start_price || "N/A";
-    
-    // Round stock to whole number
-    let stock = p.stock_amount || "N/A";
-    if (!isNaN(stock) && stock !== "N/A") {
-        stock = Math.round(parseFloat(stock));
+
+    // Round stock to whole number properly
+    let stock = "N/A";
+    if (p.stock_amount) {
+        const stockNum = Number(p.stock_amount); // Convert string to number
+        if (!isNaN(stockNum)) {
+            stock = Math.round(stockNum); // Round to nearest integer
+        }
     }
 
     const div = document.createElement("div");
@@ -55,4 +58,3 @@ products.forEach(p => {
     container.appendChild(div);
 });
 }
-
