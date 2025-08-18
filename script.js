@@ -39,11 +39,44 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+/* Visit counter (localStorage) */
+function incrementVisitCount() {
+  try {
+    const key = "rcb_visit_count";
+    const raw = localStorage.getItem(key);
+    let n = raw ? parseInt(raw, 10) : 0;
+    if (isNaN(n)) n = 0;
+    n++;
+    localStorage.setItem(key, String(n));
+    const el = document.getElementById("visit-count");
+    if (el) el.textContent = `Visits: ${n}`;
+  } catch (err) {
+    // localStorage may be blocked; silently ignore
+    const el = document.getElementById("visit-count");
+    if (el) el.textContent = `Visits: —`;
+  }
+}
+
+/* Compute total stock and show */
+function computeAndShowTotalStock(dataArray) {
+  let total = 0;
+  dataArray.forEach(item => {
+    const n = parseFloat(item.stock_amount);
+    if (!isNaN(n)) total += n;
+  });
+  total = Math.round(total);
+  const el = document.getElementById("total-stock");
+  if (el) el.textContent = `Total stock: ${total}`;
+}
+
 /* Load CSV */
 Papa.parse(CSV_PATH, {
   download: true,
   header: true,
   complete: function(results) {
+    // increment visit count immediately (or you can do it earlier)
+    incrementVisitCount();
+
     // Keep original order in allData but normalize prices
     allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
@@ -54,7 +87,16 @@ Papa.parse(CSV_PATH, {
       } else {
         item.start_price = 0;
       }
+      // normalize stock_amount (keep original value but ensure numeric if possible)
+      if (item.stock_amount !== undefined && item.stock_amount !== null) {
+        const s = parseFloat(String(item.stock_amount).replace(/[^0-9.-]/g, ""));
+        if (!isNaN(s)) item.stock_amount = Math.round(s);
+        // if NaN leave original; computeTotal will ignore NaN
+      }
     });
+
+    // Show total stock (sum of all items)
+    computeAndShowTotalStock(allData);
 
     // Prepare top300 by price for featured selection (not shuffled)
     top300 = [...allData].sort((a,b) => b.start_price - a.start_price).slice(0, 300);
@@ -65,7 +107,7 @@ Papa.parse(CSV_PATH, {
     // Render featured
     renderFeatured();
 
-    // --- KEY: Render ALL products in a random order on each page load ---
+    // --- Render ALL products in a random order on each page load ---
     const randomizedAllDisplay = shuffleArray(allData);
     renderAllProducts(randomizedAllDisplay);
     // -------------------------------------------------------------------
@@ -182,7 +224,7 @@ function renderExpandedList() {
     const price = formatPrice(item.start_price);
 
     let stock = "N/A";
-    if (item.stock_amount) {
+    if (item.stock_amount !== undefined && item.stock_amount !== null) {
       const stockNum = parseFloat(item.stock_amount);
       if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
     }
@@ -221,7 +263,7 @@ function renderAllProducts(products) {
     const body = p.body || "";
     const price = formatPrice(p.start_price);
     let stock = "N/A";
-    if (p.stock_amount) {
+    if (p.stock_amount !== undefined && p.stock_amount !== null) {
       const stockNum = parseFloat(p.stock_amount);
       if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
     }
