@@ -3,7 +3,8 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   download: true,
   header: true,
   complete: function(results) {
-    const data = results.data;
+    // Filter out completely empty rows
+    const data = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
     // Show all products at first
     renderProducts(data);
@@ -12,7 +13,7 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
     document.getElementById("search").addEventListener("input", (e) => {
       const query = e.target.value.trim().toLowerCase();
 
-      // Filter across both title + body
+      // Filter across title + body
       const filtered = data.filter(item => {
         const title = (item.title || "").toLowerCase();
         const body = (item.body || "").toLowerCase();
@@ -23,6 +24,7 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
     });
   }
 });
+
 
 function renderProducts(products) {
   const container = document.getElementById("product-list");
