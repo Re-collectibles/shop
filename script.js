@@ -56,24 +56,19 @@ Papa.parse(CSV_PATH, {
   download: true,
   header: true,
   complete: function(results) {
-    // increment visit count immediately (or you can do it earlier)
-    incrementVisitCount();
-
     // Keep original order in allData but normalize prices
     allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
-    // Normalize price numbers
+    // Normalize price numbers and stock_amount
     allData.forEach(item => {
       if (item.start_price) {
         item.start_price = parseFloat(item.start_price.toString().replace(/[^0-9.]/g, "")) || 0;
       } else {
         item.start_price = 0;
       }
-      // normalize stock_amount (keep original value but ensure numeric if possible)
       if (item.stock_amount !== undefined && item.stock_amount !== null) {
         const s = parseFloat(String(item.stock_amount).replace(/[^0-9.-]/g, ""));
         if (!isNaN(s)) item.stock_amount = Math.round(s);
-        // if NaN leave original; computeTotal will ignore NaN
       }
     });
 
