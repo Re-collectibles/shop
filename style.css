@@ -19,7 +19,7 @@ body {
 
 .header-left { display:flex; align-items:center; }
 .header-left h1 { margin-left:10px; font-size:24px; }
-.flag { width:40px; height:auto; }
+.flag { width:100px; height:auto; }
 .header-right p { margin:0; text-align:right; }
 
 /* Search */
