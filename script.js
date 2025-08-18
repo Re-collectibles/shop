@@ -33,11 +33,16 @@ function renderProducts(products) {
     return;
   }
 
-  products.forEach(p => {
+products.forEach(p => {
     const title = p.title || "Untitled";
     const body = p.body || "No description available.";
     const price = p.start_price || "N/A";
-    const stock = p.stock_amount || "N/A";
+    
+    // Round stock to whole number
+    let stock = p.stock_amount || "N/A";
+    if (!isNaN(stock) && stock !== "N/A") {
+        stock = Math.round(parseFloat(stock));
+    }
 
     const div = document.createElement("div");
     div.className = "product";
@@ -48,6 +53,6 @@ function renderProducts(products) {
       <em>Stock: ${stock}</em>
     `;
     container.appendChild(div);
-  });
+});
 }
 
