@@ -1,5 +1,5 @@
 // Load the CSV and display products
-Papa.parse("data/products.csv", {
+Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   download: true,
   header: true,
   complete: function(results) {
