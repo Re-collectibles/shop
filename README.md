@@ -34,13 +34,13 @@ This guide explains how to update your website with new TradeMe product exports 
 2. Find this line:
 
 ```javascript
-Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
+Papa.parse("data/ProductExportTradeMe250817_202019.csv", {````
 
 3. Replace the filename with your new CSV name if you didn’t overwrite the old one.  
    Example:
 
 ```javascript
-Papa.parse("data/YourNewCSV.csv", {
+Papa.parse("data/YourNewCSV.csv", {````
 
 ### 5. Save & Commit Changes
 
