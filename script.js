@@ -27,9 +27,9 @@ function renderProducts(products) {
     div.className = "product";
     div.innerHTML = `
       <h2>${p.title}</h2>
-      <p>${p.desc}</p>
-      <strong>Price: $${p.price}</strong><br>
-      <em>Stock: ${p.stock}</em>
+      <p>${p.body}</p>
+      <strong>Price: $${p.start_price}</strong><br>
+      <em>Stock: ${p.stock_amount}</em>
     `;
     container.appendChild(div);
   });
