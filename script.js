@@ -4,17 +4,21 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   header: true,
   complete: function(results) {
     const data = results.data;
-    console.log("First row object:", data[0]); // Debug: check the keys
+
+    // Show all products at first
     renderProducts(data);
 
-    // Setup search
+    // Search handler
     document.getElementById("search").addEventListener("input", (e) => {
-      const query = e.target.value.toLowerCase();
+      const query = e.target.value.trim().toLowerCase();
+
+      // Filter across both title + body
       const filtered = data.filter(item => {
         const title = (item.title || "").toLowerCase();
         const body = (item.body || "").toLowerCase();
         return title.includes(query) || body.includes(query);
       });
+
       renderProducts(filtered);
     });
   }
@@ -23,6 +27,11 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
 function renderProducts(products) {
   const container = document.getElementById("product-list");
   container.innerHTML = "";
+
+  if (!products || products.length === 0) {
+    container.innerHTML = "<p>No results found.</p>";
+    return;
+  }
 
   products.forEach(p => {
     const title = p.title || "Untitled";
