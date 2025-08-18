@@ -35,3 +35,17 @@ This guide explains how to update your website with new TradeMe product exports 
 
 ```javascript
 Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
+
+3. Replace the filename with your new CSV name if you didn’t overwrite the old one.  
+   Example:
+
+```javascript
+Papa.parse("data/YourNewCSV.csv", {
+
+### 5. Save & Commit Changes
+
+After editing files or uploading a new CSV, click **Commit changes**.
+
+
+> After committing, your changes will immediately appear on the live GitHub Pages site (after a few seconds).
+
