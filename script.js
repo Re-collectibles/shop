@@ -1,8 +1,8 @@
 /* Globals */
 let allData = [];
 let top300 = [];
-let featured = [];    // currently shown Featured (5)
-let expandedItems = []; // multiple expanded items appended below featured
+let featured = [];          // currently shown Featured (5)
+let expandedItems = [];     // multiple expanded items appended below featured
 let rotationInterval = null;
 
 /* CSV path (adjust if needed) */
@@ -21,9 +21,8 @@ function formatPrice(num) {
   return `$${Number(num).toFixed(2)}`;
 }
 function toUniqueId(item) {
-  return (item && (item.id || item.listing_id || item.title + '||' + (item.start_price || ''))) || JSON.stringify(item);
+  return (item && (item.id || item.listing_id || (item.title || '') + '||' + (item.start_price || ''))) || JSON.stringify(item);
 }
-function shallowEqualBooks(a,b) { return toUniqueId(a) === toUniqueId(b); }
 function escapeHtml(str) {
   if (str === undefined || str === null) return "";
   return String(str)
@@ -108,7 +107,7 @@ function renderFeatured(animate = false) {
   });
 }
 
-/* Create a single featured card DOM element */
+/* Create a single featured card DOM element (compact view) */
 function createFeaturedCard(item, index) {
   const div = document.createElement("div");
   div.className = "product";
@@ -116,7 +115,7 @@ function createFeaturedCard(item, index) {
 
   const title = item.title || "Untitled";
   const truncated = truncateText(item.body || "", 260);
-  // Always show "Show more" per request
+  // Always show "Show more"
   const needsShowMore = true;
 
   div.innerHTML = `
@@ -141,17 +140,20 @@ function appendExpandedItem(item) {
   // avoid duplicates: if this item is already expanded, scroll to it
   const id = toUniqueId(item);
   if (expandedItems.some(x => toUniqueId(x) === id)) {
-    // scroll to existing expanded card
     const existingEl = document.querySelector(`#expanded-list .expanded-card[data-id="${encodeURIComponent(id)}"]`);
     if (existingEl) existingEl.scrollIntoView({behavior: "smooth", block: "center"});
     return;
   }
 
+  // Add to expanded list and render
   expandedItems.push(item);
   renderExpandedList();
 }
 
-/* Render expanded list (all appended expanded cards) */
+/* Render expanded list (all appended expanded cards)
+   IMPORTANT: each expanded card uses the SAME HTML structure as the main list items,
+   but gets .featured-expanded class so it keeps the featured color/border.
+*/
 function renderExpandedList() {
   const container = document.getElementById("expanded-list");
   container.innerHTML = "";
@@ -172,6 +174,7 @@ function renderExpandedList() {
       if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
     }
 
+    /* IMPORTANT: Use the same DOM structure as renderAllProducts so visuals match */
     div.innerHTML = `
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(body)}</p>
@@ -182,7 +185,7 @@ function renderExpandedList() {
     container.appendChild(div);
   });
 
-  // scroll to the last appended card
+  // scroll to the last appended card for convenience
   const last = container.lastElementChild;
   if (last) last.scrollIntoView({behavior: "smooth", block: "center"});
 }
