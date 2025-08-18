@@ -1,4 +1,5 @@
-let top300 = []; // keep in global scope
+let top300 = []; 
+let allData = [];
 let featuredInterval;
 
 Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
@@ -6,10 +7,10 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   header: true,
   complete: function(results) {
     // Filter out empty rows
-    let data = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
+    allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
-    // Convert price to number
-    data.forEach(item => {
+    // Convert price
+    allData.forEach(item => {
       if (item.start_price) {
         item.start_price = parseFloat(item.start_price.toString().replace(/[^0-9.]/g, ""));
       } else {
@@ -17,28 +18,22 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
       }
     });
 
-    // Sort by price (highest first)
-    data.sort((a, b) => b.start_price - a.start_price);
+    // Sort by price, top 300 for featured
+    top300 = [...allData].sort((a, b) => b.start_price - a.start_price).slice(0, 300);
 
-    // Take top 300
-    top300 = data.slice(0, 300);
-
-    // Shuffle randomly
-    top300 = top300.sort(() => Math.random() - 0.5);
-
-    // Pick first featured
+    // First featured
     updateFeatured();
 
-    // Start auto-rotation every 30s
+    // Auto rotate featured every 30s
     featuredInterval = setInterval(updateFeatured, 30000);
 
-    // Render all 300 below featured
-    renderProducts(top300, "product-list");
+    // Show all products below
+    renderProducts(allData, "product-list");
 
-    // Search within 300
+    // Search handler (filters all data)
     document.getElementById("search").addEventListener("input", (e) => {
       const query = e.target.value.trim().toLowerCase();
-      const filtered = top300.filter(item => {
+      const filtered = allData.filter(item => {
         const title = (item.title || "").toLowerCase();
         const body = (item.body || "").toLowerCase();
         return title.includes(query) || body.includes(query);
@@ -48,27 +43,22 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   }
 });
 
-// Fade + refresh featured books
+// Update featured with fade + random 5
 function updateFeatured() {
   const featuredContainer = document.getElementById("featured-list");
-
-  // Fade out
   featuredContainer.classList.add("fade-out");
 
   setTimeout(() => {
-    // Pick 5 random from top300
     let shuffled = [...top300].sort(() => Math.random() - 0.5);
     let featured = shuffled.slice(0, 5);
 
-    renderProducts(featured, "featured-list");
-
-    // Fade in
+    renderProducts(featured, "featured-list", true);
     featuredContainer.classList.remove("fade-out");
-  }, 1000); // match CSS fade duration
+  }, 1000);
 }
 
 // Render function
-function renderProducts(products, containerId = "product-list") {
+function renderProducts(products, containerId = "product-list", isFeatured = false) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
 
@@ -92,12 +82,38 @@ function renderProducts(products, containerId = "product-list") {
 
     const div = document.createElement("div");
     div.className = "product";
-    div.innerHTML = `
-      <h2>${title}</h2>
-      ${containerId !== "featured-list" ? `<p>${body}</p>` : ""}
-      <strong>${price}</strong><br>
-      ${containerId !== "featured-list" ? `<em>Stock: ${stock}</em>` : ""}
-    `;
+
+    if (isFeatured) {
+      // Compact featured card
+      div.innerHTML = `
+        <h2>${title}</h2>
+        <strong>${price}</strong>
+        <div class="details" style="display:none;">
+          <p>${body}</p>
+          <em>Stock: ${stock}</em>
+        </div>
+      `;
+
+      // Click to expand/collapse
+      div.addEventListener("click", () => {
+        div.classList.toggle("expanded");
+        const details = div.querySelector(".details");
+        if (details.style.display === "none") {
+          details.style.display = "block";
+        } else {
+          details.style.display = "none";
+        }
+      });
+    } else {
+      // Full card (for all books below)
+      div.innerHTML = `
+        <h2>${title}</h2>
+        <p>${body}</p>
+        <strong>${price}</strong><br>
+        <em>Stock: ${stock}</em>
+      `;
+    }
+
     container.appendChild(div);
   });
 }
