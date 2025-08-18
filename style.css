@@ -68,11 +68,21 @@ body {
 }
 
 .featured .product {
-  background-color: #fff7e6; /* light yellow highlight */
+  background-color: #fff7e6;
   border: 2px solid red;
   text-align: center;
-  transition: opacity 1s ease-in-out;
+  transition: opacity 1s ease-in-out, transform 0.3s ease;
   opacity: 1;
+  cursor: pointer;
+  overflow: hidden;
+  max-height: 150px; /* compact by default */
+}
+
+.featured .product.expanded {
+  grid-column: span 5; /* take full row when expanded */
+  text-align: left;
+  max-height: 500px;   /* allow space */
+  transition: max-height 0.5s ease;
 }
 
 .fade-out {
