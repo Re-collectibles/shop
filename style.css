@@ -19,8 +19,24 @@ body {
 
 .header-left { display:flex; align-items:center; }
 .header-left h1 { margin-left:10px; font-size:24px; }
+
+/* Flag size ~3x bigger */
 .flag { width:100px; height:auto; }
+
 .header-right p { margin:0; text-align:right; }
+
+/* Total stock / visits styling */
+#total-stock {
+  margin-top: 6px;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+#visit-count {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #666;
+}
 
 /* Search */
 #search {
