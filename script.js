@@ -3,10 +3,10 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   download: true,
   header: true,
   complete: function(results) {
-    // Filter out completely empty rows
+    // Filter out empty rows
     let data = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
-    // Convert price to number for sorting
+    // Convert price to number
     data.forEach(item => {
       if (item.start_price) {
         item.start_price = parseFloat(item.start_price.toString().replace(/[^0-9.]/g, ""));
@@ -15,7 +15,7 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
       }
     });
 
-    // Sort by price descending
+    // Sort by price (highest first)
     data.sort((a, b) => b.start_price - a.start_price);
 
     // Take top 300
@@ -24,10 +24,14 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
     // Shuffle randomly
     top300 = top300.sort(() => Math.random() - 0.5);
 
-    // Show products
-    renderProducts(top300);
+    // Pick 5 featured books
+    let featured = top300.slice(0, 5);
 
-    // Search handler (filters only within these 300)
+    // Render featured + main list
+    renderProducts(featured, "featured-list");
+    renderProducts(top300, "product-list");
+
+    // Search only within top300
     document.getElementById("search").addEventListener("input", (e) => {
       const query = e.target.value.trim().toLowerCase();
 
@@ -37,13 +41,14 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
         return title.includes(query) || body.includes(query);
       });
 
-      renderProducts(filtered);
+      renderProducts(filtered, "product-list");
     });
   }
 });
 
-function renderProducts(products) {
-  const container = document.getElementById("product-list");
+// Reusable render function
+function renderProducts(products, containerId = "product-list") {
+  const container = document.getElementById(containerId);
   container.innerHTML = "";
 
   if (!products || products.length === 0) {
@@ -56,7 +61,7 @@ function renderProducts(products) {
     const body = p.body || "No description available.";
     const price = (p.start_price && !isNaN(p.start_price)) ? p.start_price.toFixed(2) : "N/A";
 
-    // Convert stock to number and round to integer
+    // Stock formatting
     let stock = "N/A";
     if (p.stock_amount) {
       const stockNum = parseFloat(p.stock_amount);
