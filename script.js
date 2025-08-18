@@ -9,9 +9,16 @@ let rotationInterval = null;
 const CSV_PATH = "data/ProductExportTradeMe250817_202019.csv";
 
 /* Utilities */
+// Proper Fisher-Yates shuffle (stable & unbiased)
 function shuffleArray(arr) {
-  return arr.slice().sort(() => Math.random() - 0.5);
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
+
 function truncateText(text, length = 260) {
   if (!text) return "";
   return text.length > length ? text.slice(0, length) + "…" : text;
@@ -37,6 +44,7 @@ Papa.parse(CSV_PATH, {
   download: true,
   header: true,
   complete: function(results) {
+    // Keep original order in allData but normalize prices
     allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
     // Normalize price numbers
@@ -48,7 +56,7 @@ Papa.parse(CSV_PATH, {
       }
     });
 
-    // Top 300 by price for featured selection
+    // Prepare top300 by price for featured selection (not shuffled)
     top300 = [...allData].sort((a,b) => b.start_price - a.start_price).slice(0, 300);
 
     // Initialize featured (5 random unique from top300)
@@ -57,7 +65,7 @@ Papa.parse(CSV_PATH, {
     // Render featured
     renderFeatured();
 
-    // --- NEW: Render ALL products in a random order on each page load ---
+    // --- KEY: Render ALL products in a random order on each page load ---
     const randomizedAllDisplay = shuffleArray(allData);
     renderAllProducts(randomizedAllDisplay);
     // -------------------------------------------------------------------
