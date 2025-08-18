@@ -33,12 +33,14 @@ body {
 }
 
 #search {
-  width: 33%;  /* about one-third of the page */
+  width: 33%;
   padding: 8px;
-  margin-bottom: 20px;
+  margin: 0 auto 20px auto; /* centered */
+  display: block;
   font-size: 16px;
 }
 
+/* Product Cards */
 .product {
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -49,4 +51,17 @@ body {
 
 .product h2 {
   margin-top: 0;
+}
+
+/* Featured Row */
+.featured {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.featured .product {
+  background-color: #fff7e6; /* light yellow highlight */
+  border: 2px solid red;
 }
