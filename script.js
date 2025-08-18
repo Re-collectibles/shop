@@ -4,6 +4,7 @@ Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   header: true,
   complete: function(results) {
     const data = results.data;
+    console.log("First row object:", data[0]); // Debug: check the keys
     renderProducts(data);
 
     // Setup search
@@ -40,3 +41,4 @@ function renderProducts(products) {
     container.appendChild(div);
   });
 }
+
