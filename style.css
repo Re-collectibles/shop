@@ -33,7 +33,7 @@ body {
 }
 
 #search {
-  width: 30%;
+  width: 33%;  /* about one-third of the page */
   padding: 8px;
   margin-bottom: 20px;
   font-size: 16px;
