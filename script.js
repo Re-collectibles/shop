@@ -54,9 +54,13 @@ Papa.parse(CSV_PATH, {
     // Initialize featured (5 random unique from top300)
     featured = pickRandomUniqueFrom(top300, 5);
 
-    // Render featured & all products
+    // Render featured
     renderFeatured();
-    renderAllProducts(allData);
+
+    // --- NEW: Render ALL products in a random order on each page load ---
+    const randomizedAllDisplay = shuffleArray(allData);
+    renderAllProducts(randomizedAllDisplay);
+    // -------------------------------------------------------------------
 
     // Start rotation every 30s (keeps replacing entire featured set)
     rotationInterval = setInterval(() => {
@@ -64,7 +68,7 @@ Papa.parse(CSV_PATH, {
       renderFeatured(true);
     }, 30000);
 
-    // Search handler filters ALL products below
+    // Search handler filters ALL products below; show results in randomized order
     const searchInput = document.getElementById("search");
     searchInput.addEventListener("input", (e) => {
       const query = e.target.value.trim().toLowerCase();
@@ -73,8 +77,9 @@ Papa.parse(CSV_PATH, {
         const body = (item.body || "").toLowerCase();
         return title.includes(query) || body.includes(query);
       });
-      // show filtered main list
-      renderAllProducts(filtered);
+      // Shuffle filtered results so search view is randomized too
+      const randomizedFiltered = shuffleArray(filtered);
+      renderAllProducts(randomizedFiltered);
     });
   }
 });
@@ -151,7 +156,7 @@ function appendExpandedItem(item) {
 }
 
 /* Render expanded list (all appended expanded cards)
-   IMPORTANT: each expanded card uses the SAME HTML structure as the main list items,
+   Each expanded card uses the SAME HTML structure as the main list items,
    but gets .featured-expanded class so it keeps the featured color/border.
 */
 function renderExpandedList() {
@@ -174,7 +179,7 @@ function renderExpandedList() {
       if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
     }
 
-    /* IMPORTANT: Use the same DOM structure as renderAllProducts so visuals match */
+    /* Use the same DOM structure as renderAllProducts so visuals match */
     div.innerHTML = `
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(body)}</p>
