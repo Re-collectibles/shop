@@ -1,30 +1,46 @@
+/* Globals */
 let allData = [];
 let top300 = [];
 let featured = [];    // currently shown Featured (5)
-let expandedItem = null;
+let expandedItems = []; // multiple expanded items appended below featured
 let rotationInterval = null;
 
-// CSV path - update if needed
+/* CSV path (adjust if needed) */
 const CSV_PATH = "data/ProductExportTradeMe250817_202019.csv";
 
-// Utilities
+/* Utilities */
 function shuffleArray(arr) {
   return arr.slice().sort(() => Math.random() - 0.5);
 }
-
 function truncateText(text, length = 260) {
   if (!text) return "";
   return text.length > length ? text.slice(0, length) + "…" : text;
 }
+function formatPrice(num) {
+  if (num === null || num === undefined || isNaN(num)) return "N/A";
+  return `$${Number(num).toFixed(2)}`;
+}
+function toUniqueId(item) {
+  return (item && (item.id || item.listing_id || item.title + '||' + (item.start_price || ''))) || JSON.stringify(item);
+}
+function shallowEqualBooks(a,b) { return toUniqueId(a) === toUniqueId(b); }
+function escapeHtml(str) {
+  if (str === undefined || str === null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
-// Load CSV
+/* Load CSV */
 Papa.parse(CSV_PATH, {
   download: true,
   header: true,
   complete: function(results) {
     allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
-    // Normalize price
+    // Normalize price numbers
     allData.forEach(item => {
       if (item.start_price) {
         item.start_price = parseFloat(item.start_price.toString().replace(/[^0-9.]/g, "")) || 0;
@@ -39,18 +55,17 @@ Papa.parse(CSV_PATH, {
     // Initialize featured (5 random unique from top300)
     featured = pickRandomUniqueFrom(top300, 5);
 
-    // Render everything
+    // Render featured & all products
     renderFeatured();
     renderAllProducts(allData);
 
-    // Start rotation every 30 seconds
+    // Start rotation every 30s (keeps replacing entire featured set)
     rotationInterval = setInterval(() => {
-      // If there's an expanded item open, still rotate featured row
       featured = pickRandomUniqueFrom(top300, 5);
-      renderFeatured(true); // animate
+      renderFeatured(true);
     }, 30000);
 
-    // Search handler (filters allData)
+    // Search handler filters ALL products below
     const searchInput = document.getElementById("search");
     searchInput.addEventListener("input", (e) => {
       const query = e.target.value.trim().toLowerCase();
@@ -59,23 +74,21 @@ Papa.parse(CSV_PATH, {
         const body = (item.body || "").toLowerCase();
         return title.includes(query) || body.includes(query);
       });
+      // show filtered main list
       renderAllProducts(filtered);
     });
   }
 });
 
-// Pick n unique random items from source array
+/* Pick n unique random items from source array */
 function pickRandomUniqueFrom(sourceArr, n) {
   const copy = shuffleArray(sourceArr);
   return copy.slice(0, Math.min(n, copy.length));
 }
 
-// Render featured (optionally animate)
+/* Render featured (optionally animate) */
 function renderFeatured(animate = false) {
   const featuredContainer = document.getElementById("featured-list");
-  const expandedContainer = document.getElementById("expanded-container");
-
-  // When rotating with animation: fade-out then replace
   if (animate) {
     featuredContainer.classList.add("fade-out");
     setTimeout(() => {
@@ -93,30 +106,19 @@ function renderFeatured(animate = false) {
   featured.forEach((item, idx) => {
     featuredContainer.appendChild(createFeaturedCard(item, idx));
   });
-
-  // If there is an expanded panel open, make sure it's still displayed below featured
-  if (expandedItem) {
-    renderExpandedPanel(expandedItem);
-  } else {
-    // clear expanded container
-    expandedContainer.innerHTML = "";
-  }
 }
 
-// Create a featured card DOM element
+/* Create a single featured card DOM element */
 function createFeaturedCard(item, index) {
   const div = document.createElement("div");
   div.className = "product";
-  div.dataset.featuredIndex = index; // store index for replacement
+  div.dataset.featuredIndex = index;
 
   const title = item.title || "Untitled";
-  // truncation ~260 chars (~4 lines)
   const truncated = truncateText(item.body || "", 260);
+  // Always show "Show more" per request
+  const needsShowMore = true;
 
-  // Determine if "Show more" is needed
-  const needsShowMore = (item.body || "").length > 260;
-
-  // Assemble inner HTML
   div.innerHTML = `
     <h2>${escapeHtml(title)}</h2>
     <div class="truncated">${escapeHtml(truncated)}</div>
@@ -124,121 +126,68 @@ function createFeaturedCard(item, index) {
     <div class="price">${formatPrice(item.start_price)}</div>
   `;
 
-  // Click handler on "Show more" or entire card
+  // Bind show-more to append expanded full card below featured
   const showMoreEl = div.querySelector(".show-more");
-  // If showMore exists, bind click there. If not, allow click on whole card.
-  if (showMoreEl) {
-    showMoreEl.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openFeaturedExpanded(item, index);
-    });
-  } else {
-    // The body is short; the user might still want to open it
-    div.addEventListener("click", () => openFeaturedExpanded(item, index));
-  }
+  showMoreEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    appendExpandedItem(item);
+  });
 
   return div;
 }
 
-// Open expanded panel for a featured item
-function openFeaturedExpanded(item, featuredIndex) {
-  // If already expanded same item, do nothing
-  if (expandedItem && expandedItem._uid === item._uid) return;
-
-  // If some other expanded item exists, close it first
-  closeExpandedPanel();
-
-  // Remove this item from featured array and replace it with a new one
-  replaceFeaturedItem(item);
-
-  // Save expandedItem and render its expanded panel BELOW the featured row
-  expandedItem = item;
-  renderExpandedPanel(item);
-}
-
-// Replace the clicked featured item with a new random top300 item
-function replaceFeaturedItem(clickedItem) {
-  // find index of the clicked item in current featured
-  const idx = featured.findIndex(f => shallowEqualBooks(f, clickedItem));
-
-  // If not found (shouldn't happen), do nothing
-  if (idx === -1) return;
-
-  // Choose a replacement from top300 that's not already in featured and not the clicked item
-  const currentIds = new Set(featured.map(toUniqueId));
-  currentIds.add(toUniqueId(clickedItem)); // ensure clicked excluded
-  let replacement = null;
-  for (let candidate of shuffleArray(top300)) {
-    if (!currentIds.has(toUniqueId(candidate))) {
-      replacement = candidate;
-      break;
-    }
+/* Append expanded full card below featured (multiple allowed) */
+function appendExpandedItem(item) {
+  // avoid duplicates: if this item is already expanded, scroll to it
+  const id = toUniqueId(item);
+  if (expandedItems.some(x => toUniqueId(x) === id)) {
+    // scroll to existing expanded card
+    const existingEl = document.querySelector(`#expanded-list .expanded-card[data-id="${encodeURIComponent(id)}"]`);
+    if (existingEl) existingEl.scrollIntoView({behavior: "smooth", block: "center"});
+    return;
   }
 
-  // If found, replace; otherwise remove slot (unlikely)
-  if (replacement) {
-    featured[idx] = replacement;
-  } else {
-    // fallback: remove the slot
-    featured.splice(idx, 1);
-    // keep featured size 5 by attempting to add any top300 not already present
-    for (let candidate of top300) {
-      if (!featured.some(f => shallowEqualBooks(f, candidate))) {
-        featured.push(candidate);
-        break;
-      }
-    }
-  }
-
-  // re-render featured to reflect replacement
-  renderFeatured();
+  expandedItems.push(item);
+  renderExpandedList();
 }
 
-// Render the expanded panel below featured
-function renderExpandedPanel(item) {
-  const container = document.getElementById("expanded-container");
+/* Render expanded list (all appended expanded cards) */
+function renderExpandedList() {
+  const container = document.getElementById("expanded-list");
   container.innerHTML = "";
 
-  if (!item) return;
+  expandedItems.forEach(item => {
+    const id = toUniqueId(item);
+    const div = document.createElement("div");
+    div.className = "product featured-expanded expanded-card";
+    div.dataset.id = encodeURIComponent(id);
 
-  const div = document.createElement("div");
-  div.className = "expanded-panel";
+    const title = item.title || "Untitled";
+    const body = item.body || "No description available.";
+    const price = formatPrice(item.start_price);
 
-  const title = item.title || "Untitled";
-  const body = item.body || "No description available.";
-  const price = formatPrice(item.start_price);
-  let stock = "N/A";
-  if (item.stock_amount) {
-    const stockNum = parseFloat(item.stock_amount);
-    if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
-  }
+    let stock = "N/A";
+    if (item.stock_amount) {
+      const stockNum = parseFloat(item.stock_amount);
+      if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
+    }
 
-  div.innerHTML = `
-    <h2>${escapeHtml(title)}</h2>
-    <p>${escapeHtml(body)}</p>
-    <p><strong>Price: ${price}</strong></p>
-    <p><em>Stock: ${escapeHtml(stock)}</em></p>
-    <a class="close-expanded" role="button">Close</a>
-  `;
+    div.innerHTML = `
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(body)}</p>
+      <div class="price">${price}</div>
+      <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
+    `;
 
-  // Close handler
-  div.querySelector(".close-expanded").addEventListener("click", () => {
-    closeExpandedPanel();
+    container.appendChild(div);
   });
 
-  container.appendChild(div);
-  // scroll to expanded panel lightly (optional)
-  // div.scrollIntoView({behavior: "smooth", block: "center"});
+  // scroll to the last appended card
+  const last = container.lastElementChild;
+  if (last) last.scrollIntoView({behavior: "smooth", block: "center"});
 }
 
-// Close and remove expanded panel
-function closeExpandedPanel() {
-  expandedItem = null;
-  const container = document.getElementById("expanded-container");
-  container.innerHTML = "";
-}
-
-// Render the full product list (all books or filtered)
+/* Render main product list (full dataset or filtered) */
 function renderAllProducts(products) {
   const container = document.getElementById("product-list");
   container.innerHTML = "";
@@ -265,34 +214,9 @@ function renderAllProducts(products) {
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(body)}</p>
       <div class="price">${price}</div>
-      <div style="position:absolute; right:12px; bottom:12px; font-style:italic; font-size:13px;">Stock: ${escapeHtml(stock)}</div>
+      <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
     `;
 
     container.appendChild(div);
   });
-}
-
-// Helpers
-function formatPrice(num) {
-  if (num === null || num === undefined || isNaN(num)) return "N/A";
-  return `$${Number(num).toFixed(2)}`;
-}
-
-function toUniqueId(item) {
-  // try to produce a stable unique id for an item
-  return (item && (item.id || item.listing_id || item.title + '||' + (item.start_price || ''))) || JSON.stringify(item);
-}
-
-function shallowEqualBooks(a,b) {
-  return toUniqueId(a) === toUniqueId(b);
-}
-
-// basic HTML escape
-function escapeHtml(str) {
-  if (str === undefined || str === null) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
