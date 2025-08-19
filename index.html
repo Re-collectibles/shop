@@ -1,43 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Mainly NZ Bookshop</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Re-collectibles Bookshop & More</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- Top Header -->
   <header class="top-header">
     <div class="header-left">
       <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Flag_of_New_Zealand.svg" alt="NZ Flag" class="flag">
-      <h1>Mainly NZ Bookshop</h1>
+      <h1>Re-collectibles Bookshop & More</h1>
     </div>
     <div class="header-right">
       <p>Shipping to be calculated</p>
       <p>Email: <a href="mailto:malcparknz@gmail.com">malcparknz@gmail.com</a></p>
-      <p id="total-stock"></p>
+      <p id="total-stock">Total stock: —</p>
+      <div id="cart-summary">🛒 Cart (0)</div>
     </div>
   </header>
 
-  <!-- Cart -->
-  <div class="cart-container">
-    <div class="cart-header">
-      <h2>Your Cart</h2>
-      <span id="cart-toggle">[Show]</span>
-    </div>
-    <div class="cart-items" id="cart-items"></div>
-    <div class="cart-summary" id="cart-summary"></div>
-    <button class="copy-email" id="copy-email">Copy to Email</button>
+  <!-- Search -->
+  <div class="search-wrapper">
+    <input type="text" id="search" placeholder="Search stock...">
+    <button id="clear-search">Clear</button>
   </div>
 
-  <!-- Search -->
-  <div class="search-container">
-    <input type="text" id="search" placeholder="Search products...">
-    <button id="clear-search">Clear</button>
+  <!-- Featured wrapper (top of page) -->
+  <div id="featured-wrapper">
+    <div id="featured-list" class="featured"></div>
+    <!-- expanded-list holds all "show more" full cards appended -->
+    <div id="expanded-list" class="expanded-list"></div>
   </div>
 
   <!-- Product List -->
   <div id="product-list"></div>
+
+  <!-- Cart Sidebar -->
+  <div id="cart-sidebar" class="cart-sidebar">
+    <h2>Your Cart</h2>
+    <ul id="cart-items"></ul>
+    <p id="cart-total"></p>
+    <button id="close-cart">Close</button>
+  </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
