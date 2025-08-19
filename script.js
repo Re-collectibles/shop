@@ -1,184 +1,231 @@
-let allProducts = [];
-let featuredProducts = [];
-let cart = [];
+/* Globals */
+let allData = [];
+let top300 = [];
+let featured = [];          // currently shown Featured (5)
+let expandedItems = [];     // multiple expanded items appended below featured
+let rotationInterval = null;
 
-// Load CSV
-Papa.parse("DATA.csv", {
+/* CSV path (adjust if needed) */
+const CSV_PATH = "data/ProductExportTradeMe250817_202019.csv";
+
+/* Utilities */
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function truncateText(text, length = 260) {
+  if (!text) return "";
+  return text.length > length ? text.slice(0, length) + "…" : text;
+}
+function formatPrice(num) {
+  if (num === null || num === undefined || isNaN(num)) return "N/A";
+  return `$${Number(num).toFixed(2)}`;
+}
+function toUniqueId(item) {
+  return (item && (item.id || item.listing_id || (item.title || '') + '||' + (item.start_price || ''))) || JSON.stringify(item);
+}
+function escapeHtml(str) {
+  if (str === undefined || str === null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/* Compute total stock and show */
+function computeAndShowTotalStock(dataArray) {
+  let total = 0;
+  dataArray.forEach(item => {
+    const n = parseFloat(item.stock_amount);
+    if (!isNaN(n)) total += n;
+  });
+  total = Math.round(total);
+  const el = document.getElementById("total-stock");
+  if (el) el.textContent = `Total stock: ${total}`;
+}
+
+/* Load CSV */
+Papa.parse(CSV_PATH, {
   download: true,
   header: true,
   complete: function(results) {
-    allProducts = results.data.filter(row => row.Title && row.Price); 
+    allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
-    // Convert price string to number for sorting
-    allProducts.forEach(p => {
-      p.PriceNum = parseFloat(p.Price.replace(/[^0-9.]/g, "")) || 0;
-      p.Stock = parseInt(p.Stock || 1);
+    allData.forEach(item => {
+      if (item.start_price) {
+        item.start_price = parseFloat(item.start_price.toString().replace(/[^0-9.]/g, "")) || 0;
+      } else {
+        item.start_price = 0;
+      }
+      if (item.stock_amount !== undefined && item.stock_amount !== null) {
+        const s = parseFloat(String(item.stock_amount).replace(/[^0-9.-]/g, ""));
+        if (!isNaN(s)) item.stock_amount = Math.round(s);
+      }
     });
 
-    // Total stock
-    const totalStock = allProducts.reduce((sum, p) => sum + (p.Stock || 0), 0);
-    document.getElementById("total-stock").textContent = `Total Stock: ${totalStock}`;
+    computeAndShowTotalStock(allData);
 
-    // Shuffle all products
-    shuffle(allProducts);
-
-    // Get top 300 expensive
-    featuredProducts = [...allProducts]
-      .sort((a, b) => b.PriceNum - a.PriceNum)
-      .slice(0, 300);
+    top300 = [...allData].sort((a,b) => b.start_price - a.start_price).slice(0, 300);
+    featured = pickRandomUniqueFrom(top300, 5);
 
     renderFeatured();
-    renderProducts(allProducts);
 
-    // Rotate featured every 30s
-    setInterval(renderFeatured, 30000);
+    const randomizedAllDisplay = shuffleArray(allData);
+    renderAllProducts(randomizedAllDisplay);
+
+    rotationInterval = setInterval(() => {
+      featured = pickRandomUniqueFrom(top300, 5);
+      renderFeatured(true);
+    }, 30000);
+
+    const searchInput = document.getElementById("search");
+    searchInput.addEventListener("input", (e) => {
+      const query = e.target.value.trim().toLowerCase();
+      const filtered = allData.filter(item => {
+        const title = (item.title || "").toLowerCase();
+        const body = (item.body || "").toLowerCase();
+        return title.includes(query) || body.includes(query);
+      });
+      const randomizedFiltered = shuffleArray(filtered);
+      renderAllProducts(randomizedFiltered);
+    });
+
+    // Clear search button
+    document.getElementById("clear-search").addEventListener("click", () => {
+      searchInput.value = "";
+      const randomizedAllDisplay = shuffleArray(allData);
+      renderAllProducts(randomizedAllDisplay);
+    });
   }
 });
 
-// Shuffle helper
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
+/* Helpers */
+function pickRandomUniqueFrom(sourceArr, n) {
+  const copy = shuffleArray(sourceArr);
+  return copy.slice(0, Math.min(n, copy.length));
 }
 
-// Render featured
-function renderFeatured() {
-  const featuredList = document.getElementById("featured-list");
-  featuredList.innerHTML = "";
-
-  shuffle(featuredProducts);
-  const selected = featuredProducts.slice(0, 5);
-
-  selected.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "product featured";
-    div.innerHTML = `
-      <h2>${p.Title}</h2>
-      <p>${truncateText(p.Description, 65)}</p>
-      <p><strong>$${p.PriceNum.toFixed(2)}</strong></p>
-      <button onclick="expandFeatured(this, '${p.Title}')">Show More</button>
-      <button onclick="addToCart('${p.Title}', ${p.PriceNum})">Add to Cart</button>
-    `;
-    featuredList.appendChild(div);
+function renderFeatured(animate = false) {
+  const featuredContainer = document.getElementById("featured-list");
+  if (animate) {
+    featuredContainer.classList.add("fade-out");
+    setTimeout(() => {
+      featuredContainer.classList.remove("fade-out");
+      featuredContainer.innerHTML = "";
+      featured.forEach((item, idx) => {
+        featuredContainer.appendChild(createFeaturedCard(item, idx));
+      });
+    }, 900);
+    return;
+  }
+  featuredContainer.innerHTML = "";
+  featured.forEach((item, idx) => {
+    featuredContainer.appendChild(createFeaturedCard(item, idx));
   });
 }
 
-// Expand featured into full card below featured section
-function expandFeatured(btn, title) {
-  const product = featuredProducts.find(p => p.Title === title);
-  if (!product) return;
-
-  const expandedDiv = document.createElement("div");
-  expandedDiv.className = "product featured expanded";
-  expandedDiv.innerHTML = `
-    <h2>${product.Title}</h2>
-    <p>${product.Description}</p>
-    <p><strong>$${product.PriceNum.toFixed(2)}</strong></p>
-    <button onclick="addToCart('${product.Title}', ${product.PriceNum})">Add to Cart</button>
-  `;
-  document.getElementById("featured").appendChild(expandedDiv);
-
-  // Replace original with another random featured
-  btn.parentElement.remove();
-  const replacement = featuredProducts[Math.floor(Math.random() * featuredProducts.length)];
+function createFeaturedCard(item, index) {
   const div = document.createElement("div");
-  div.className = "product featured";
+  div.className = "product";
+  div.dataset.featuredIndex = index;
+
+  const title = item.title || "Untitled";
+  const truncated = truncateText(item.body || "", 260);
+
   div.innerHTML = `
-    <h2>${replacement.Title}</h2>
-    <p>${truncateText(replacement.Description, 65)}</p>
-    <p><strong>$${replacement.PriceNum.toFixed(2)}</strong></p>
-    <button onclick="expandFeatured(this, '${replacement.Title}')">Show More</button>
-    <button onclick="addToCart('${replacement.Title}', ${replacement.PriceNum})">Add to Cart</button>
+    <h2>${escapeHtml(title)}</h2>
+    <div class="truncated">${escapeHtml(truncated)}</div>
+    <div class="show-more" role="button">Show more</div>
+    <div class="price">${formatPrice(item.start_price)}</div>
   `;
-  document.getElementById("featured-list").appendChild(div);
+
+  div.querySelector(".show-more").addEventListener("click", (e) => {
+    e.stopPropagation();
+    appendExpandedItem(item);
+  });
+
+  return div;
 }
 
-// Render all stock
-function renderProducts(products) {
-  const list = document.getElementById("product-list");
-  list.innerHTML = "";
+function appendExpandedItem(item) {
+  const id = toUniqueId(item);
+  if (expandedItems.some(x => toUniqueId(x) === id)) {
+    const existingEl = document.querySelector(`#expanded-list .expanded-card[data-id="${encodeURIComponent(id)}"]`);
+    if (existingEl) existingEl.scrollIntoView({behavior: "smooth", block: "center"});
+    return;
+  }
+  expandedItems.push(item);
+  renderExpandedList();
+}
+
+function renderExpandedList() {
+  const container = document.getElementById("expanded-list");
+  container.innerHTML = "";
+
+  expandedItems.forEach(item => {
+    const id = toUniqueId(item);
+    const div = document.createElement("div");
+    div.className = "product featured-expanded expanded-card";
+    div.dataset.id = encodeURIComponent(id);
+
+    const title = item.title || "Untitled";
+    const body = item.body || "No description available.";
+    const price = formatPrice(item.start_price);
+
+    let stock = "N/A";
+    if (item.stock_amount !== undefined && item.stock_amount !== null) {
+      const stockNum = parseFloat(item.stock_amount);
+      if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
+    }
+
+    div.innerHTML = `
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(body)}</p>
+      <div class="price">${price}</div>
+      <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
+    `;
+
+    container.appendChild(div);
+  });
+
+  const last = container.lastElementChild;
+  if (last) last.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+function renderAllProducts(products) {
+  const container = document.getElementById("product-list");
+  container.innerHTML = "";
+
+  if (!products || products.length === 0) {
+    container.innerHTML = "<p>No results found.</p>";
+    return;
+  }
 
   products.forEach(p => {
     const div = document.createElement("div");
     div.className = "product";
+
+    const title = p.title || "Untitled";
+    const body = p.body || "";
+    const price = formatPrice(p.start_price);
+    let stock = "N/A";
+    if (p.stock_amount !== undefined && p.stock_amount !== null) {
+      const stockNum = parseFloat(p.stock_amount);
+      if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
+    }
+
     div.innerHTML = `
-      <h2>${p.Title}</h2>
-      <p>${p.Description}</p>
-      <p><strong>$${p.PriceNum.toFixed(2)}</strong></p>
-      <button onclick="addToCart('${p.Title}', ${p.PriceNum})">Add to Cart</button>
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(body)}</p>
+      <div class="price">${price}</div>
+      <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
     `;
-    list.appendChild(div);
+
+    container.appendChild(div);
   });
-}
-
-// Truncate helper
-function truncateText(text, maxLength) {
-  if (!text) return "";
-  return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
-}
-
-// Search
-document.getElementById("search").addEventListener("input", function() {
-  const term = this.value.toLowerCase();
-  const filtered = allProducts.filter(p =>
-    p.Title.toLowerCase().includes(term) ||
-    (p.Description && p.Description.toLowerCase().includes(term))
-  );
-  renderProducts(filtered);
-});
-
-// Clear search
-document.getElementById("clear-search").addEventListener("click", () => {
-  document.getElementById("search").value = "";
-  renderProducts(allProducts);
-});
-
-// Cart functions
-function addToCart(title, price) {
-  const existing = cart.find(item => item.title === title);
-  if (existing) {
-    existing.qty++;
-  } else {
-    cart.push({ title, price, qty: 1 });
-  }
-  renderCart();
-}
-
-function removeFromCart(title) {
-  cart = cart.filter(item => item.title !== title);
-  renderCart();
-}
-
-function renderCart() {
-  const cartDiv = document.getElementById("cart-items");
-  cartDiv.innerHTML = "";
-
-  let total = 0;
-
-  cart.forEach(item => {
-    total += item.price * item.qty;
-    const div = document.createElement("div");
-    div.className = "cart-item";
-    div.innerHTML = `
-      ${item.title} (x${item.qty}) - $${(item.price * item.qty).toFixed(2)}
-      <button onclick="removeFromCart('${item.title}')">Remove</button>
-    `;
-    cartDiv.appendChild(div);
-  });
-
-  document.getElementById("cart-total").textContent = 
-    `Total: $${total.toFixed(2)} (${cart.length} items)`;
-}
-
-// Copy cart to email
-function copyCartToEmail() {
-  let body = "Hello,%0D%0A%0D%0AI would like to order the following:%0D%0A%0D%0A";
-  cart.forEach(item => {
-    body += `${item.title} (x${item.qty}) - $${(item.price * item.qty).toFixed(2)}%0D%0A`;
-  });
-  body += "%0D%0AThank you.";
-
-  window.location.href = `mailto:malcparknz@gmail.com?subject=Book Order&body=${body}`;
 }
