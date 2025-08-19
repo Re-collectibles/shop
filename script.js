@@ -1,45 +1,114 @@
-let allData = [];
-let cart = {};
+// ----------------- CART DATA -----------------
+let cart = [];
 
+// Utility to update cart display
+function updateCart() {
+  const cartContainer = document.getElementById("cart-items");
+  const cartTotal = document.getElementById("cart-total");
+  cartContainer.innerHTML = "";
+
+  if (cart.length === 0) {
+    cartContainer.innerHTML = "<p>Your cart is empty.</p>";
+    cartTotal.textContent = "";
+    return;
+  }
+
+  let totalPrice = 0;
+  let totalItems = 0;
+
+  cart.forEach((item, index) => {
+    totalPrice += item.price * item.quantity;
+    totalItems += item.quantity;
+
+    const div = document.createElement("div");
+    div.className = "cart-item";
+    div.innerHTML = `
+      <span><strong>${item.title}</strong> (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}</span>
+      <button onclick="removeFromCart(${index})">Remove</button>
+    `;
+    cartContainer.appendChild(div);
+  });
+
+  cartTotal.textContent = `Total (${totalItems} items): $${totalPrice.toFixed(2)}`;
+}
+
+// Add item to cart
+function addToCart(product) {
+  const existing = cart.find(c => c.title === product.title);
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    cart.push({ title: product.title, price: parseFloat(product.start_price) || 0, quantity: 1 });
+  }
+  updateCart();
+}
+
+// Remove item
+function removeFromCart(index) {
+  cart.splice(index, 1);
+  updateCart();
+}
+
+// Copy cart to email
+function copyCartToEmail() {
+  if (cart.length === 0) {
+    alert("Your cart is empty.");
+    return;
+  }
+
+  let emailBody = "Hello,%0D%0A%0D%0AI would like to order the following:%0D%0A%0D%0A";
+  cart.forEach(item => {
+    emailBody += `${item.title} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}%0D%0A`;
+  });
+
+  let totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  emailBody += `%0D%0ATotal: $${totalPrice.toFixed(2)}%0D%0A`;
+
+  window.location.href = `mailto:malcparknz@gmail.com?subject=Book Order&body=${emailBody}`;
+}
+
+// ----------------- CSV + PRODUCTS -----------------
 Papa.parse("data/ProductExportTradeMe250817_202019.csv", {
   download: true,
   header: true,
-  complete: function(results) {
-    // Filter valid rows
-    allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
+  complete: function (results) {
+    const data = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
-    // Shuffle products randomly
-    allData = allData.sort(() => Math.random() - 0.5);
+    // Randomize all stock order
+    const randomizedData = data.sort(() => Math.random() - 0.5);
 
-    // Render all
-    renderProducts(allData);
+    // Featured top 300 by price
+    const top300 = [...data]
+      .filter(item => parseFloat(item.start_price))
+      .sort((a, b) => parseFloat(b.start_price) - parseFloat(a.start_price))
+      .slice(0, 300);
 
-    // Stock count
-    const totalStock = allData.reduce((sum, item) => {
-      const stockNum = parseFloat(item.stock_amount);
-      return sum + (isNaN(stockNum) ? 0 : stockNum);
-    }, 0);
-    document.getElementById("total-stock").textContent = `Total Stock: ${totalStock}`;
+    renderFeatured(top300);
+    renderProducts(randomizedData);
+    updateTotalStock(data);
 
     // Search handler
-    document.getElementById("search").addEventListener("input", handleSearch);
-    document.getElementById("clear-search").addEventListener("click", () => {
-      document.getElementById("search").value = "";
-      renderProducts(allData);
+    const searchInput = document.getElementById("search");
+    const clearSearch = document.getElementById("clear-search");
+
+    searchInput.addEventListener("input", (e) => {
+      const query = e.target.value.trim().toLowerCase();
+      const filtered = randomizedData.filter(item => {
+        const title = (item.title || "").toLowerCase();
+        const body = (item.body || "").toLowerCase();
+        return title.includes(query) || body.includes(query);
+      });
+      renderProducts(filtered);
+    });
+
+    clearSearch.addEventListener("click", () => {
+      searchInput.value = "";
+      renderProducts(randomizedData);
     });
   }
 });
 
-function handleSearch(e) {
-  const query = e.target.value.trim().toLowerCase();
-  const filtered = allData.filter(item => {
-    const title = (item.title || "").toLowerCase();
-    const body = (item.body || "").toLowerCase();
-    return title.includes(query) || body.includes(query);
-  });
-  renderProducts(filtered);
-}
-
+// ----------------- RENDERING -----------------
 function renderProducts(products) {
   const container = document.getElementById("product-list");
   container.innerHTML = "";
@@ -57,7 +126,9 @@ function renderProducts(products) {
     let stock = "N/A";
     if (p.stock_amount) {
       const stockNum = parseFloat(p.stock_amount);
-      if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
+      if (!isNaN(stockNum)) {
+        stock = Math.round(stockNum).toString();
+      }
     }
 
     const div = document.createElement("div");
@@ -67,74 +138,78 @@ function renderProducts(products) {
       <p>${body}</p>
       <strong>Price: $${price}</strong><br>
       <em>Stock: ${stock}</em><br>
-      <button class="add-to-cart">Add to Cart</button>
+      <button onclick='addToCart(${JSON.stringify(p)})'>Add to Cart</button>
     `;
-
-    div.querySelector(".add-to-cart").addEventListener("click", () => addToCart(title, price));
     container.appendChild(div);
   });
 }
 
-/* ---- CART FUNCTIONS ---- */
-function addToCart(title, price) {
-  if (cart[title]) {
-    cart[title].quantity += 1;
-  } else {
-    cart[title] = { price: parseFloat(price) || 0, quantity: 1 };
+function renderFeatured(top300) {
+  const featuredContainer = document.getElementById("featured-list");
+
+  function pickRandomFive() {
+    const shuffled = [...top300].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 5);
   }
-  renderCart();
-}
 
-function removeFromCart(title) {
-  delete cart[title];
-  renderCart();
-}
+  function displayFeatured() {
+    featuredContainer.innerHTML = "";
+    const featured = pickRandomFive();
 
-function renderCart() {
-  const itemsContainer = document.getElementById("cart-items");
-  const summary = document.getElementById("cart-summary");
+    featured.forEach(p => {
+      const title = p.title || "Untitled";
+      const body = p.body || "No description available.";
+      const price = p.start_price || "N/A";
 
-  itemsContainer.innerHTML = "";
+      let stock = "N/A";
+      if (p.stock_amount) {
+        const stockNum = parseFloat(p.stock_amount);
+        if (!isNaN(stockNum)) {
+          stock = Math.round(stockNum).toString();
+        }
+      }
 
-  let totalItems = 0;
-  let totalPrice = 0;
+      const shortText = body.length > 65 ? body.substring(0, 65).replace(/\s+\S*$/, "") + "..." : body;
 
-  Object.entries(cart).forEach(([title, item]) => {
-    totalItems += item.quantity;
-    totalPrice += item.price * item.quantity;
+      const div = document.createElement("div");
+      div.className = "product featured";
+      div.innerHTML = `
+        <h2>${title}</h2>
+        <p>${shortText}</p>
+        <strong>Price: $${price}</strong><br>
+        <em>Stock: ${stock}</em><br>
+        <button onclick='addToCart(${JSON.stringify(p)})'>Add to Cart</button>
+        <button class="show-more">Show More</button>
+      `;
 
-    const div = document.createElement("div");
-    div.className = "cart-item";
-    div.innerHTML = `
-      <span>${title} (x${item.quantity}) - $${item.price}</span>
-      <button class="remove-item">Remove</button>
-    `;
-    div.querySelector(".remove-item").addEventListener("click", () => removeFromCart(title));
-    itemsContainer.appendChild(div);
-  });
+      div.querySelector(".show-more").addEventListener("click", () => {
+        const expanded = document.createElement("div");
+        expanded.className = "product featured expanded";
+        expanded.innerHTML = `
+          <h2>${title}</h2>
+          <p>${body}</p>
+          <strong>Price: $${price}</strong><br>
+          <em>Stock: ${stock}</em><br>
+          <button onclick='addToCart(${JSON.stringify(p)})'>Add to Cart</button>
+        `;
+        featuredContainer.insertAdjacentElement("afterend", expanded);
+        div.remove();
+      });
 
-  summary.textContent = `Total Items: ${totalItems}, Total Price: $${totalPrice.toFixed(2)}`;
-}
-
-/* Toggle cart visibility */
-document.getElementById("cart-toggle").addEventListener("click", () => {
-  const items = document.getElementById("cart-items");
-  if (items.style.display === "block") {
-    items.style.display = "none";
-    document.getElementById("cart-toggle").textContent = "[Show]";
-  } else {
-    items.style.display = "block";
-    document.getElementById("cart-toggle").textContent = "[Hide]";
+      featuredContainer.appendChild(div);
+    });
   }
-});
 
-/* Copy to email */
-document.getElementById("copy-email").addEventListener("click", () => {
-  let cartText = "My Cart:\n\n";
-  Object.entries(cart).forEach(([title, item]) => {
-    cartText += `${title} (x${item.quantity}) - $${item.price}\n`;
-  });
+  displayFeatured();
+  setInterval(displayFeatured, 30000);
+}
 
-  const mailto = `mailto:malcparknz@gmail.com?subject=Bookshop Order&body=${encodeURIComponent(cartText)}`;
-  window.location.href = mailto;
-});
+// ----------------- TOTAL STOCK -----------------
+function updateTotalStock(data) {
+  const total = data.reduce((sum, p) => {
+    const stockNum = parseFloat(p.stock_amount);
+    return sum + (isNaN(stockNum) ? 0 : Math.round(stockNum));
+  }, 0);
+
+  document.getElementById("total-stock").textContent = `Total Stock: ${total}`;
+}
