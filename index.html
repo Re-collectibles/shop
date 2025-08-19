@@ -1,51 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Re-collectibles Bookshop & More</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Re-collectibles Bookstore</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="script.js" defer></script>
 </head>
 <body>
-  <!-- Top Header -->
-  <header class="top-header">
-    <div class="header-left">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Flag_of_New_Zealand.svg" alt="NZ Flag" class="flag">
-      <h1>Re-collectibles Bookshop & More</h1>
-    </div>
-    <div class="header-right">
-      <p>Shipping to be calculated</p>
-      <p>Email: <a href="mailto:malcparknz@gmail.com">malcparknz@gmail.com</a></p>
-      <p id="total-stock">Total stock: —</p>
-      <div id="cart-summary">🛒 Cart (0)</div>
-    </div>
+  <!-- HEADER -->
+  <header>
+    <img src="nz-flag.png" alt="New Zealand Flag" class="flag">
+    <h1>Re-collectibles Bookstore</h1>
+    <p class="shipping-note">Shipping can be combined</p>
+    <p class="email">Contact: <a href="mailto:malcparknz@gmail.com">malcparknz@gmail.com</a></p>
+    <p id="total-stock"></p>
   </header>
 
-  <!-- Search -->
-  <div class="search-wrapper">
-    <input type="text" id="search" placeholder="Search stock...">
+  <!-- SEARCH -->
+  <div class="search-bar">
+    <input type="text" id="search" placeholder="Search books...">
     <button id="clear-search">Clear</button>
   </div>
 
-  <!-- Featured wrapper (top of page) -->
-  <div id="featured-wrapper">
-    <div id="featured-list" class="featured"></div>
-    <!-- expanded-list holds all "show more" full cards appended -->
-    <div id="expanded-list" class="expanded-list"></div>
-  </div>
+  <!-- FEATURED -->
+  <section id="featured">
+    <h2>Featured Stock</h2>
+    <div id="featured-list"></div>
+  </section>
 
-  <!-- Product List -->
-  <div id="product-list"></div>
-
-  <!-- Cart Sidebar -->
-  <div id="cart-sidebar" class="cart-sidebar">
+  <!-- CART -->
+  <section id="cart">
     <h2>Your Cart</h2>
-    <ul id="cart-items"></ul>
+    <div id="cart-items"></div>
     <p id="cart-total"></p>
-    <button id="close-cart">Close</button>
-  </div>
+    <button onclick="copyCartToEmail()">Send Cart via Email</button>
+  </section>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="script.js"></script>
+  <!-- ALL PRODUCTS -->
+  <section id="products">
+    <h2>All Stock</h2>
+    <div id="product-list"></div>
+  </section>
 </body>
 </html>
