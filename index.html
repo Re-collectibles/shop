@@ -2,40 +2,95 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Re-collectibles Bookshop & More</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lora:ital,wght@0,400;0,500;1,400&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <!-- Top Header -->
   <header class="top-header">
-    <div class="header-left">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Flag_of_New_Zealand.svg" alt="NZ Flag" class="flag">
-      <h1>Re-collectibles Bookshop & More</h1>
+    <div class="header-inner">
+      <div class="header-flag-title">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Flag_of_New_Zealand.svg" alt="NZ Flag" class="flag">
+        <div class="header-title-block">
+          <div class="header-eyebrow">Est. Whanganui, New Zealand</div>
+          <h1>Re-collectibles</h1>
+          <div class="header-subtitle">Bookshop &amp; More</div>
+        </div>
+      </div>
+      <div class="header-divider"></div>
+      <div class="header-right">
+        <div class="header-info-row">
+          <span class="info-icon">✉</span>
+          <span>Enquiries &amp; photos: <a href="mailto:malcparknz@gmail.com">malcparknz@gmail.com</a></span>
+        </div>
+        <div class="header-info-row">
+          <span class="info-icon">📦</span>
+          <span>Shipping calculated at checkout</span>
+        </div>
+        <div class="header-info-row stock-row">
+          <span class="info-icon">📚</span>
+          <span id="total-stock">Loading catalogue…</span>
+        </div>
+      </div>
     </div>
-    <div class="header-right">
-      <p>Shipping to be calculated</p>
-      <p>Please email for photos. Email: <a href="mailto:malcparknz@gmail.com">malcparknz@gmail.com</a></p>
-      <p id="total-stock">Total stock: —</p>
+    <div class="header-rule">
+      <span class="rule-ornament">❧</span>
     </div>
   </header>
 
   <!-- Search -->
   <div class="search-wrapper">
-    <input type="text" id="search" placeholder="Search stock...">
-    <button id="clear-search">Clear</button>
+    <div class="search-inner">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search" placeholder="Search the catalogue…" autocomplete="off">
+      <button id="clear-search" aria-label="Clear search">✕</button>
+    </div>
+    <div id="search-count" class="search-count"></div>
   </div>
 
-  <!-- Featured wrapper (top of page) -->
-  <div id="featured-wrapper">
-    <div id="featured-list" class="featured"></div>
-    <!-- expanded-list holds all "show more" full cards appended -->
-    <div id="expanded-list" class="expanded-list"></div>
-  </div>
+  <!-- Featured Section -->
+  <section class="featured-section">
+    <div class="section-header">
+      <div class="section-rule"></div>
+      <h2 class="section-title">
+        <span class="section-title-deco">✦</span>
+        Featured Listings
+        <span class="section-title-deco">✦</span>
+      </h2>
+      <div class="section-rule"></div>
+    </div>
+    <div id="featured-wrapper">
+      <div id="featured-list" class="featured"></div>
+      <div id="expanded-list" class="expanded-list"></div>
+    </div>
+  </section>
 
-  <!-- Product List -->
-  <div id="product-list"></div>
+  <!-- Catalogue Section -->
+  <section class="catalogue-section">
+    <div class="section-header">
+      <div class="section-rule"></div>
+      <h2 class="section-title">
+        <span class="section-title-deco">✦</span>
+        Full Catalogue
+        <span class="section-title-deco">✦</span>
+      </h2>
+      <div class="section-rule"></div>
+    </div>
+    <div id="product-list"></div>
+  </section>
 
-  <!-- Scripts -->
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-ornament">❦</div>
+    <p>Re-collectibles Bookshop &amp; More · Whanganui, New Zealand</p>
+    <p><a href="mailto:malcparknz@gmail.com">malcparknz@gmail.com</a></p>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="script.js"></script>
 </body>
