@@ -6,7 +6,7 @@ let expandedItems = [];     // multiple expanded items appended below featured
 let rotationInterval = null;
 
 /* CSV path (adjust if needed) */
-const CSV_PATH = "data/ProductExportTradeMe251202_143519.csv";
+const CSV_PATH = "ProductExportTradeMe260408_164022.csv";
 
 /* Utilities */
 function shuffleArray(arr) {
