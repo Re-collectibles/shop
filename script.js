@@ -1,14 +1,16 @@
-/* Globals */
+/* =============================================
+   RE-COLLECTIBLES BOOKSHOP — script.js
+   ============================================= */
+
 let allData = [];
 let top300 = [];
-let featured = [];          // currently shown Featured (5)
-let expandedItems = [];     // multiple expanded items appended below featured
+let featured = [];
+let expandedItems = [];
 let rotationInterval = null;
 
-/* CSV path (adjust if needed) */
 const CSV_PATH = "data/ProductExportTradeMe260408_164022.csv";
 
-/* Utilities */
+/* ---- Utilities ---- */
 function shuffleArray(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -17,17 +19,21 @@ function shuffleArray(arr) {
   }
   return a;
 }
-function truncateText(text, length = 260) {
+
+function truncateText(text, length = 220) {
   if (!text) return "";
   return text.length > length ? text.slice(0, length) + "…" : text;
 }
+
 function formatPrice(num) {
   if (num === null || num === undefined || isNaN(num)) return "N/A";
   return `$${Number(num).toFixed(2)}`;
 }
+
 function toUniqueId(item) {
   return (item && (item.id || item.listing_id || (item.title || '') + '||' + (item.start_price || ''))) || JSON.stringify(item);
 }
+
 function escapeHtml(str) {
   if (str === undefined || str === null) return "";
   return String(str)
@@ -37,7 +43,7 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
-/* Compute total stock and show */
+/* ---- Total stock ---- */
 function computeAndShowTotalStock(dataArray) {
   let total = 0;
   dataArray.forEach(item => {
@@ -46,10 +52,10 @@ function computeAndShowTotalStock(dataArray) {
   });
   total = Math.round(total);
   const el = document.getElementById("total-stock");
-  if (el) el.textContent = `Total stock: ${total}`;
+  if (el) el.textContent = `${total.toLocaleString()} items in catalogue`;
 }
 
-/* Load CSV */
+/* ---- Load CSV ---- */
 Papa.parse(CSV_PATH, {
   download: true,
   header: true,
@@ -69,8 +75,9 @@ Papa.parse(CSV_PATH, {
     });
 
     computeAndShowTotalStock(allData);
+    updateSearchCount(allData.length, false);
 
-    top300 = [...allData].sort((a,b) => b.start_price - a.start_price).slice(0, 300);
+    top300 = [...allData].sort((a, b) => b.start_price - a.start_price).slice(0, 300);
     featured = pickRandomUniqueFrom(top300, 5);
 
     renderFeatured();
@@ -86,6 +93,12 @@ Papa.parse(CSV_PATH, {
     const searchInput = document.getElementById("search");
     searchInput.addEventListener("input", (e) => {
       const query = e.target.value.trim().toLowerCase();
+      if (!query) {
+        const randomizedAllDisplay = shuffleArray(allData);
+        renderAllProducts(randomizedAllDisplay);
+        updateSearchCount(allData.length, false);
+        return;
+      }
       const filtered = allData.filter(item => {
         const title = (item.title || "").toLowerCase();
         const body = (item.body || "").toLowerCase();
@@ -93,18 +106,41 @@ Papa.parse(CSV_PATH, {
       });
       const randomizedFiltered = shuffleArray(filtered);
       renderAllProducts(randomizedFiltered);
+      updateSearchCount(filtered.length, true, query);
     });
 
-    // Clear search button
     document.getElementById("clear-search").addEventListener("click", () => {
       searchInput.value = "";
       const randomizedAllDisplay = shuffleArray(allData);
       renderAllProducts(randomizedAllDisplay);
+      updateSearchCount(allData.length, false);
+      searchInput.focus();
     });
+  },
+  error: function() {
+    const container = document.getElementById("product-list");
+    if (container) container.innerHTML = `<p class="no-results">Could not load catalogue. Please check your data file path.</p>`;
+    const el = document.getElementById("total-stock");
+    if (el) el.textContent = "Catalogue unavailable";
   }
 });
 
-/* Helpers */
+/* ---- Search count helper ---- */
+function updateSearchCount(count, isFiltered, query = "") {
+  const el = document.getElementById("search-count");
+  if (!el) return;
+  if (!isFiltered) {
+    el.textContent = "";
+    return;
+  }
+  if (count === 0) {
+    el.textContent = `No results found for "${query}"`;
+  } else {
+    el.textContent = `${count.toLocaleString()} result${count !== 1 ? "s" : ""} for "${query}"`;
+  }
+}
+
+/* ---- Helpers ---- */
 function pickRandomUniqueFrom(sourceArr, n) {
   const copy = shuffleArray(sourceArr);
   return copy.slice(0, Math.min(n, copy.length));
@@ -120,7 +156,7 @@ function renderFeatured(animate = false) {
       featured.forEach((item, idx) => {
         featuredContainer.appendChild(createFeaturedCard(item, idx));
       });
-    }, 900);
+    }, 700);
     return;
   }
   featuredContainer.innerHTML = "";
@@ -133,20 +169,28 @@ function createFeaturedCard(item, index) {
   const div = document.createElement("div");
   div.className = "product";
   div.dataset.featuredIndex = index;
+  div.style.animationDelay = `${index * 60}ms`;
 
   const title = item.title || "Untitled";
-  const truncated = truncateText(item.body || "", 260);
+  const truncated = truncateText(item.body || "", 220);
 
   div.innerHTML = `
     <h2>${escapeHtml(title)}</h2>
     <div class="truncated">${escapeHtml(truncated)}</div>
-    <div class="show-more" role="button">Show more</div>
+    <div class="show-more" role="button" tabindex="0">Read more</div>
     <div class="price">${formatPrice(item.start_price)}</div>
   `;
 
-  div.querySelector(".show-more").addEventListener("click", (e) => {
+  const showMore = div.querySelector(".show-more");
+  showMore.addEventListener("click", (e) => {
     e.stopPropagation();
     appendExpandedItem(item);
+  });
+  showMore.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      appendExpandedItem(item);
+    }
   });
 
   return div;
@@ -156,7 +200,7 @@ function appendExpandedItem(item) {
   const id = toUniqueId(item);
   if (expandedItems.some(x => toUniqueId(x) === id)) {
     const existingEl = document.querySelector(`#expanded-list .expanded-card[data-id="${encodeURIComponent(id)}"]`);
-    if (existingEl) existingEl.scrollIntoView({behavior: "smooth", block: "center"});
+    if (existingEl) existingEl.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
   expandedItems.push(item);
@@ -194,7 +238,7 @@ function renderExpandedList() {
   });
 
   const last = container.lastElementChild;
-  if (last) last.scrollIntoView({behavior: "smooth", block: "center"});
+  if (last) last.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function renderAllProducts(products) {
@@ -202,30 +246,43 @@ function renderAllProducts(products) {
   container.innerHTML = "";
 
   if (!products || products.length === 0) {
-    container.innerHTML = "<p>No results found.</p>";
+    container.innerHTML = `<p class="no-results">No items found. Try a different search term.</p>`;
     return;
   }
 
-  products.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "product";
+  // Render in chunks for performance on large datasets
+  const CHUNK = 100;
+  let offset = 0;
 
-    const title = p.title || "Untitled";
-    const body = p.body || "";
-    const price = formatPrice(p.start_price);
-    let stock = "N/A";
-    if (p.stock_amount !== undefined && p.stock_amount !== null) {
-      const stockNum = parseFloat(p.stock_amount);
-      if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
+  function renderChunk() {
+    const slice = products.slice(offset, offset + CHUNK);
+    slice.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "product";
+
+      const title = p.title || "Untitled";
+      const body = p.body || "";
+      const price = formatPrice(p.start_price);
+      let stock = "N/A";
+      if (p.stock_amount !== undefined && p.stock_amount !== null) {
+        const stockNum = parseFloat(p.stock_amount);
+        if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
+      }
+
+      div.innerHTML = `
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(body)}</p>
+        <div class="price">${price}</div>
+        <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
+      `;
+
+      container.appendChild(div);
+    });
+    offset += CHUNK;
+    if (offset < products.length) {
+      requestAnimationFrame(renderChunk);
     }
+  }
 
-    div.innerHTML = `
-      <h2>${escapeHtml(title)}</h2>
-      <p>${escapeHtml(body)}</p>
-      <div class="price">${price}</div>
-      <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
-    `;
-
-    container.appendChild(div);
-  });
+  renderChunk();
 }
