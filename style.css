@@ -534,6 +534,10 @@ a:hover {
   background: var(--gold);
 }
 
+.catalogue-expanded-panel p {
+  white-space: pre-line;
+}
+
 /* Close button (used on both featured expanded + catalogue panel) */
 .close-btn {
   position: absolute;
