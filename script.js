@@ -207,6 +207,9 @@ function appendExpandedItem(item) {
   renderExpandedList();
 }
 
+/* =========================
+   CHANGE #1 — CLOSE BUTTON
+   ========================= */
 function renderExpandedList() {
   const container = document.getElementById("expanded-list");
   container.innerHTML = "";
@@ -228,6 +231,7 @@ function renderExpandedList() {
     }
 
     div.innerHTML = `
+      <button class="close-btn" data-close-id="${encodeURIComponent(id)}">✕ Close</button>
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(body)}</p>
       <div class="price">${price}</div>
@@ -235,12 +239,20 @@ function renderExpandedList() {
     `;
 
     container.appendChild(div);
+
+    div.querySelector('.close-btn').addEventListener('click', () => {
+      expandedItems = expandedItems.filter(x => toUniqueId(x) !== id);
+      renderExpandedList();
+    });
   });
 
   const last = container.lastElementChild;
   if (last) last.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
+/* =========================
+   CHANGE #2 + #3
+   ========================= */
 function renderAllProducts(products) {
   const container = document.getElementById("product-list");
   container.innerHTML = "";
@@ -250,7 +262,6 @@ function renderAllProducts(products) {
     return;
   }
 
-  // Render in chunks for performance on large datasets
   const CHUNK = 100;
   let offset = 0;
 
@@ -263,21 +274,50 @@ function renderAllProducts(products) {
       const title = p.title || "Untitled";
       const body = p.body || "";
       const price = formatPrice(p.start_price);
+
       let stock = "N/A";
       if (p.stock_amount !== undefined && p.stock_amount !== null) {
         const stockNum = parseFloat(p.stock_amount);
         if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
       }
 
+      /* CHANGE #2 */
       div.innerHTML = `
         <h2>${escapeHtml(title)}</h2>
-        <p>${escapeHtml(body)}</p>
+        <div class="truncated">${escapeHtml(truncateText(body, 220))}</div>
+        <div class="show-more" role="button" tabindex="0">Read more</div>
         <div class="price">${price}</div>
         <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
       `;
 
+      /* CHANGE #3 */
+      div.querySelector('.show-more').addEventListener('click', () => {
+        const existingPanel = div.nextElementSibling;
+        if (existingPanel && existingPanel.classList.contains('catalogue-expanded-panel')) {
+          existingPanel.remove();
+          return;
+        }
+
+        document.querySelectorAll('.catalogue-expanded-panel').forEach(el => el.remove());
+
+        const panel = document.createElement('div');
+        panel.className = 'catalogue-expanded-panel';
+        panel.innerHTML = `
+          <button class="close-btn">✕ Close</button>
+          <h2>${escapeHtml(title)}</h2>
+          <p>${escapeHtml(body)}</p>
+          <div class="price">${price}</div>
+          <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
+        `;
+
+        panel.querySelector('.close-btn').addEventListener('click', () => panel.remove());
+        div.after(panel);
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+
       container.appendChild(div);
     });
+
     offset += CHUNK;
     if (offset < products.length) {
       requestAnimationFrame(renderChunk);
