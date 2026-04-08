@@ -514,6 +514,46 @@ a:hover {
   font-size: 15px;
 }
 
+/* Full-width expanded panel inside catalogue grid */
+.catalogue-expanded-panel {
+  grid-column: 1 / -1;
+  background: #fffdf7;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 20px 18px 56px;
+  position: relative;
+  box-shadow: var(--shadow-hover);
+  animation: slideDown 0.3s ease;
+}
+.catalogue-expanded-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gold);
+}
+
+/* Close button (used on both featured expanded + catalogue panel) */
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: 1px solid var(--parchment);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  color: var(--ink-light);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.close-btn:hover {
+  background: var(--rust);
+  color: white;
+  border-color: var(--rust);
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
   .featured {
