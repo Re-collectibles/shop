@@ -8,7 +8,7 @@ let featured = [];
 let expandedItems = [];
 let rotationInterval = null;
 
-const CSV_PATH = "data/ProductExportTradeMe260408_164022.csv";
+const CSV_PATH = "EXPORT10-5-26.csv";
 
 /* ---- Utilities ---- */
 function shuffleArray(arr) {
