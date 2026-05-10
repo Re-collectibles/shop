@@ -41,6 +41,7 @@
       font-style: italic;
       color: var(--ink-light);
       font-size: 15px;
+      grid-column: 1 / -1;
     }
     .empty-new .ornament {
       font-size: 32px;
@@ -69,57 +70,6 @@
     .site-nav a.active {
       color: var(--gold-light);
       border-bottom-color: var(--gold);
-    }
-    /* Grid wrapper */
-    #new-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
-      margin-bottom: 40px;
-      max-width: 1400px;
-      margin-left: auto;
-      margin-right: auto;
-      padding: 0 20px;
-    }
-    /* Expanded panel spans full grid width */
-    .new-expanded-panel {
-      grid-column: 1 / -1;
-      background: #fffdf7;
-      border: 1px solid var(--gold);
-      border-radius: var(--radius);
-      padding: 20px 18px 56px;
-      position: relative;
-      box-shadow: var(--shadow-hover);
-      animation: slideDown 0.3s ease;
-    }
-    .new-expanded-panel::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: var(--gold);
-    }
-    .new-expanded-panel p {
-      white-space: pre-line;
-      font-size: 13px;
-      line-height: 1.6;
-      color: var(--ink-mid);
-    }
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    /* Truncated preview — no pre-line so clamp works */
-    .product .body-preview {
-      font-size: 12.5px;
-      line-height: 1.5;
-      color: var(--ink-light);
-      font-style: italic;
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
-      margin: 0 0 8px;
     }
   </style>
 </head>
@@ -177,7 +127,8 @@
 
     <p class="meta-bar" id="meta-bar">Loading…</p>
 
-    <div id="new-grid"></div>
+    <!-- Same id as main page so all #product-list CSS applies exactly -->
+    <div id="product-list"></div>
   </section>
 
   <!-- Footer -->
@@ -188,8 +139,9 @@
   </footer>
 
   <script>
+    /* ── utilities identical to script.js ── */
     function escapeHtml(str) {
-      if (!str) return "";
+      if (str === undefined || str === null) return "";
       return String(str)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -200,50 +152,44 @@
       if (num === null || num === undefined || isNaN(num)) return "N/A";
       return `$${Number(num).toFixed(2)}`;
     }
+    function truncateText(text, length = 220) {
+      if (!text) return "";
+      return text.length > length ? text.slice(0, length) + "…" : text;
+    }
 
-    const grid = document.getElementById("new-grid");
+    const container = document.getElementById("product-list");
 
-    function toggleExpand(key, fullBody) {
-      const existingPanel = document.getElementById("panel-" + key);
-      const btn = document.getElementById("btn-" + key);
-
-      if (existingPanel) {
-        existingPanel.remove();
-        if (btn) btn.textContent = "Read more";
+    /* ── expand/collapse — identical pattern to main page ── */
+    function toggleExpand(key, fullBody, btn) {
+      const existing = document.getElementById("panel-" + key);
+      if (existing) {
+        existing.remove();
+        btn.textContent = "Read more";
       } else {
-        if (btn) btn.textContent = "Show less";
-
+        btn.textContent = "Show less";
         const panel = document.createElement("div");
         panel.id = "panel-" + key;
-        panel.className = "new-expanded-panel";
-
-        // Escape for safe HTML display, keep line breaks
-        const safeBody = escapeHtml(fullBody);
+        panel.className = "catalogue-expanded-panel";
         panel.innerHTML = `
           <button class="close-btn" onclick="
             document.getElementById('panel-${key}').remove();
             var b = document.getElementById('btn-${key}');
             if (b) b.textContent = 'Read more';
           ">✕ Close</button>
-          <p>${safeBody}</p>
+          <p>${escapeHtml(fullBody)}</p>
         `;
-
-        // Find the card and insert panel right after it in the grid
+        // Insert right after the card — inside the grid so grid-column:1/-1 works
         const card = document.getElementById("card-" + key);
-        if (card && card.nextSibling) {
-          grid.insertBefore(panel, card.nextSibling);
-        } else {
-          grid.appendChild(panel);
-        }
+        card.insertAdjacentElement("afterend", panel);
       }
     }
 
+    /* ── render ── */
     function renderNewListings(listings) {
-      grid.innerHTML = "";
+      container.innerHTML = "";
 
       if (!listings || listings.length === 0) {
-        grid.style.display = "block";
-        grid.innerHTML = `
+        container.innerHTML = `
           <div class="empty-new">
             <span class="ornament">❧</span>
             No new listings found since the last update.<br>
@@ -257,30 +203,36 @@
         const title = item.title || "Untitled";
         const body  = item.body  || "";
         const price = formatPrice(item.start_price);
-        const stock = (item.stock_amount !== null && item.stock_amount !== undefined)
-          ? item.stock_amount : "N/A";
+        let stock = "N/A";
+        if (item.stock_amount !== undefined && item.stock_amount !== null) {
+          stock = item.stock_amount;
+        }
 
-        // Strip newlines for the preview so -webkit-line-clamp works correctly
-        const previewText = body.replace(/\r?\n/g, " ").trim();
-        const hasMore = previewText.length > 0;
+        // Use same JS truncation as main page (220 chars) — works with pre-line
+        const truncated = truncateText(body, 220);
+        const hasMore   = body.length > 220;
 
         const card = document.createElement("div");
         card.className = "product";
         card.id = "card-" + key;
-
         card.innerHTML = `
           <span class="new-badge">New</span>
           <h2>${escapeHtml(title)}</h2>
-          ${previewText ? `<p class="body-preview">${escapeHtml(previewText)}</p>` : ""}
-          ${hasMore ? `<span class="show-more" id="btn-${key}" onclick="toggleExpand('${key}', ${JSON.stringify(body)})">Read more</span>` : ""}
+          ${truncated ? `<p class="truncated">${escapeHtml(truncated)}</p>` : ""}
+          ${hasMore
+            ? `<span class="show-more" id="btn-${key}"
+                 onclick="toggleExpand('${key}', ${JSON.stringify(body)}, this)"
+               >Read more</span>`
+            : ""}
           <span class="price">${price}</span>
           <span class="stock-right">Qty: ${stock}</span>
         `;
 
-        grid.appendChild(card);
+        container.appendChild(card);
       });
     }
 
+    /* ── load data ── */
     fetch("data/new_listings.json")
       .then(r => {
         if (!r.ok) throw new Error("not found");
@@ -305,8 +257,7 @@
       .catch(() => {
         document.getElementById("new-count-header").textContent = "Unavailable";
         document.getElementById("meta-bar").textContent = "Could not load new listings data.";
-        grid.style.display = "block";
-        grid.innerHTML = `
+        container.innerHTML = `
           <div class="empty-new">
             <span class="ornament">⚠</span>
             data/new_listings.json not found.<br>
