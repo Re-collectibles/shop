@@ -28,7 +28,7 @@
       font-size: 13px;
       font-style: italic;
       color: var(--ink-light);
-      margin: 0 auto 4px;
+      margin: 0 auto 16px;
       padding: 0 20px;
     }
     .meta-bar strong {
@@ -70,6 +70,14 @@
     .site-nav a.active {
       color: var(--gold-light);
       border-bottom-color: var(--gold);
+    }
+    /* Use CSS clamp for truncation — same as main page */
+    .product .truncated {
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: pre-line;
     }
   </style>
 </head>
@@ -127,8 +135,8 @@
 
     <p class="meta-bar" id="meta-bar">Loading…</p>
 
-    <div id="new-product-list" style="padding: 0 20px;">
-      <!-- cards injected by JS -->
+    <!-- Grid lives here — expanded panels insert themselves inside it -->
+    <div id="product-list" style="padding: 0 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 40px; max-width: 1400px; margin-left: auto; margin-right: auto;">
     </div>
   </section>
 
@@ -152,41 +160,49 @@
       if (num === null || num === undefined || isNaN(num)) return "N/A";
       return `$${Number(num).toFixed(2)}`;
     }
-    function truncateText(text, length = 220) {
-      if (!text) return "";
-      return text.length > length ? text.slice(0, length) + "…" : text;
-    }
 
-    let expandedKeys = new Set();
-
+    /* ── expand / collapse — mirrors main page behaviour ── */
     function toggleExpand(key, fullBody, btn) {
-      const panel = document.getElementById("panel-" + key);
-      if (!panel) return;
-      if (expandedKeys.has(key)) {
-        panel.remove();
-        expandedKeys.delete(key);
+      const existingPanel = document.getElementById("panel-" + key);
+
+      if (existingPanel) {
+        // collapse
+        existingPanel.remove();
         btn.textContent = "Read more";
+        btn.style.cssText = "";
       } else {
-        expandedKeys.add(key);
+        // expand — insert full-width panel right after the card
         btn.textContent = "Show less";
-        const div = document.createElement("div");
-        div.id = "panel-" + key;
-        div.className = "catalogue-expanded-panel";
-        div.style.marginBottom = "16px";
-        div.innerHTML = `
-          <button class="close-btn" onclick="document.getElementById('panel-${key}').remove(); expandedKeys.delete('${key}');">✕ Close</button>
+
+        const panel = document.createElement("div");
+        panel.id = "panel-" + key;
+        panel.className = "catalogue-expanded-panel";
+        // must span full grid width
+        panel.style.gridColumn = "1 / -1";
+
+        panel.innerHTML = `
+          <button class="close-btn" onclick="
+            document.getElementById('panel-${key}').remove();
+            const b = document.getElementById('btn-${key}');
+            if (b) { b.textContent = 'Read more'; }
+          ">✕ Close</button>
           <p>${escapeHtml(fullBody)}</p>
         `;
-        btn.closest(".product").insertAdjacentElement("afterend", div);
+
+        // Insert immediately after the card in the grid
+        const card = document.getElementById("card-" + key);
+        card.insertAdjacentElement("afterend", panel);
       }
     }
 
+    /* ── render cards ── */
     function renderNewListings(listings) {
-      const container = document.getElementById("new-product-list");
-      container.innerHTML = "";
+      const grid = document.getElementById("product-list");
+      grid.innerHTML = "";
 
       if (!listings || listings.length === 0) {
-        container.innerHTML = `
+        grid.style.display = "block";
+        grid.innerHTML = `
           <div class="empty-new">
             <span class="ornament">❧</span>
             No new listings found since the last update.<br>
@@ -195,59 +211,64 @@
         return;
       }
 
-      const grid = document.createElement("div");
-      grid.id = "product-list";
-      container.appendChild(grid);
-
       listings.forEach((item, idx) => {
-        const key = "new_" + idx;
+        const key   = "new_" + idx;
         const title = item.title || "Untitled";
         const body  = item.body  || "";
         const price = formatPrice(item.start_price);
-        const stock = item.stock_amount !== null && item.stock_amount !== undefined
+        const stock = (item.stock_amount !== null && item.stock_amount !== undefined)
           ? item.stock_amount : "N/A";
-        const truncated = truncateText(body, 220);
-        const hasMore = body.length > 220;
+        const hasMore = body.trim().length > 0;
 
         const card = document.createElement("div");
         card.className = "product";
+        card.id = "card-" + key;
+
         card.innerHTML = `
           <span class="new-badge">New</span>
           <h2>${escapeHtml(title)}</h2>
-          ${truncated ? `<p class="truncated">${escapeHtml(truncated)}</p>` : ""}
-          ${hasMore ? `<span class="show-more" id="btn-${key}" onclick="toggleExpand('${key}', ${JSON.stringify(escapeHtml(body))}, document.getElementById('btn-${key}'))">Read more</span>` : ""}
+          ${body ? `<p class="truncated">${escapeHtml(body)}</p>` : ""}
+          ${hasMore ? `<span class="show-more" id="btn-${key}"
+            onclick="toggleExpand('${key}', ${JSON.stringify(body)}, this)"
+          >Read more</span>` : ""}
           <span class="price">${price}</span>
           <span class="stock-right">Qty: ${stock}</span>
         `;
+
         grid.appendChild(card);
       });
     }
 
+    /* ── fetch new_listings.json ── */
     fetch("data/new_listings.json")
       .then(r => {
         if (!r.ok) throw new Error("not found");
         return r.json();
       })
       .then(data => {
-        const count = data.new_count || 0;
+        const count   = data.new_count || 0;
         const genDate = data.generated_at
-          ? new Date(data.generated_at).toLocaleDateString("en-NZ", { day:"numeric", month:"long", year:"numeric" })
+          ? new Date(data.generated_at).toLocaleDateString("en-NZ", {
+              day: "numeric", month: "long", year: "numeric"
+            })
           : "unknown date";
 
         document.getElementById("new-count-header").textContent =
           `${count} new listing${count !== 1 ? "s" : ""} since last update`;
 
+        // ← no CSV filenames, just count + date
         document.getElementById("meta-bar").innerHTML =
-          `<strong>${count}</strong> new item${count !== 1 ? "s" : ""} added — ` +
-          `comparing <em>${data.previous_csv}</em> → <em>${data.latest_csv}</em> &nbsp;·&nbsp; Updated ${genDate}`;
+          `<strong>${count}</strong> new item${count !== 1 ? "s" : ""} added &nbsp;·&nbsp; Updated ${genDate}`;
 
         renderNewListings(data.listings || []);
       })
       .catch(() => {
         document.getElementById("new-count-header").textContent = "Unavailable";
         document.getElementById("meta-bar").textContent =
-          "Could not load new listings data. Run generate_new_listings.py first.";
-        document.getElementById("new-product-list").innerHTML = `
+          "Could not load new listings data.";
+        const grid = document.getElementById("product-list");
+        grid.style.display = "block";
+        grid.innerHTML = `
           <div class="empty-new">
             <span class="ornament">⚠</span>
             data/new_listings.json not found.<br>
