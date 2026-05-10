@@ -3,13 +3,14 @@ name: Update New Listings
 on:
   push:
     paths:
-      - 'data/*.csv'   # only runs when a CSV is added/changed
+      - 'data/*.csv'
+  workflow_dispatch:      # ← this adds a manual "Run" button on GitHub
 
 jobs:
   generate:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # needed to push new_listings.json back to repo
+      contents: write
 
     steps:
       - name: Checkout repo
