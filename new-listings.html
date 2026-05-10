@@ -71,6 +71,10 @@
       color: var(--gold-light);
       border-bottom-color: var(--gold);
     }
+    /* Expanded panel inside the new-listings grid — must span full width */
+    #product-list .catalogue-expanded-panel .new-badge {
+      margin-bottom: 12px;
+    }
   </style>
 </head>
 <body>
@@ -127,7 +131,6 @@
 
     <p class="meta-bar" id="meta-bar">Loading…</p>
 
-    <!-- Same id as main page so all #product-list CSS applies exactly -->
     <div id="product-list"></div>
   </section>
 
@@ -139,7 +142,7 @@
   </footer>
 
   <script>
-    /* ── utilities identical to script.js ── */
+    /* ── Utilities (identical to script.js) ── */
     function escapeHtml(str) {
       if (str === undefined || str === null) return "";
       return String(str)
@@ -159,32 +162,14 @@
 
     const container = document.getElementById("product-list");
 
-    /* ── expand/collapse — identical pattern to main page ── */
-    function toggleExpand(key, fullBody, btn) {
-      const existing = document.getElementById("panel-" + key);
-      if (existing) {
-        existing.remove();
-        btn.textContent = "Read more";
-      } else {
-        btn.textContent = "Show less";
-        const panel = document.createElement("div");
-        panel.id = "panel-" + key;
-        panel.className = "catalogue-expanded-panel";
-        panel.innerHTML = `
-          <button class="close-btn" onclick="
-            document.getElementById('panel-${key}').remove();
-            var b = document.getElementById('btn-${key}');
-            if (b) b.textContent = 'Read more';
-          ">✕ Close</button>
-          <p>${escapeHtml(fullBody)}</p>
-        `;
-        // Insert right after the card — inside the grid so grid-column:1/-1 works
-        const card = document.getElementById("card-" + key);
-        card.insertAdjacentElement("afterend", panel);
-      }
-    }
-
-    /* ── render ── */
+    /* ── Render new listings
+         Mirrors renderAllProducts() in script.js exactly:
+         - Card appended to the grid
+         - "Read more" inserts a .catalogue-expanded-panel immediately after
+           the card as a grid child → grid-column:1/-1 spans full width
+         - Clicking "Read more" on an already-open card closes it
+         - Opening a new card closes any previously open panel
+    ── */
     function renderNewListings(listings) {
       container.innerHTML = "";
 
@@ -198,41 +183,75 @@
         return;
       }
 
-      listings.forEach((item, idx) => {
-        const key   = "new_" + idx;
+      listings.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "product";
+
         const title = item.title || "Untitled";
         const body  = item.body  || "";
         const price = formatPrice(item.start_price);
+
         let stock = "N/A";
         if (item.stock_amount !== undefined && item.stock_amount !== null) {
           stock = item.stock_amount;
         }
 
-        // Use same JS truncation as main page (220 chars) — works with pre-line
         const truncated = truncateText(body, 220);
         const hasMore   = body.length > 220;
 
-        const card = document.createElement("div");
-        card.className = "product";
-        card.id = "card-" + key;
-        card.innerHTML = `
+        div.innerHTML = `
           <span class="new-badge">New</span>
           <h2>${escapeHtml(title)}</h2>
-          ${truncated ? `<p class="truncated">${escapeHtml(truncated)}</p>` : ""}
-          ${hasMore
-            ? `<span class="show-more" id="btn-${key}"
-                 onclick="toggleExpand('${key}', ${JSON.stringify(body)}, this)"
-               >Read more</span>`
-            : ""}
-          <span class="price">${price}</span>
-          <span class="stock-right">Qty: ${stock}</span>
+          <div class="truncated">${escapeHtml(truncated)}</div>
+          ${hasMore ? `<div class="show-more" role="button" tabindex="0">Read more</div>` : ""}
+          <div class="price">${price}</div>
+          <div class="stock-right">Qty: ${escapeHtml(String(stock))}</div>
         `;
 
-        container.appendChild(card);
+        if (hasMore) {
+          const showMoreBtn = div.querySelector(".show-more");
+
+          const openPanel = () => {
+            /* If this card's panel is already open — close it */
+            const next = div.nextElementSibling;
+            if (next && next.classList.contains("catalogue-expanded-panel")) {
+              next.remove();
+              return;
+            }
+
+            /* Close any other open panel */
+            document.querySelectorAll(".catalogue-expanded-panel").forEach(el => el.remove());
+
+            /* Build the full-width expanded panel */
+            const panel = document.createElement("div");
+            panel.className = "catalogue-expanded-panel";
+            panel.innerHTML = `
+              <button class="close-btn">✕ Close</button>
+              <span class="new-badge">New</span>
+              <h2>${escapeHtml(title)}</h2>
+              <p>${escapeHtml(body)}</p>
+              <div class="price">${price}</div>
+              <div class="stock-right">Qty: ${escapeHtml(String(stock))}</div>
+            `;
+
+            panel.querySelector(".close-btn").addEventListener("click", () => panel.remove());
+
+            /* Insert directly after the card inside the grid */
+            div.after(panel);
+            panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          };
+
+          showMoreBtn.addEventListener("click", openPanel);
+          showMoreBtn.addEventListener("keydown", e => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPanel(); }
+          });
+        }
+
+        container.appendChild(div);
       });
     }
 
-    /* ── load data ── */
+    /* ── Load data/new_listings.json (generated by generate_new_listings.py) ── */
     fetch("data/new_listings.json")
       .then(r => {
         if (!r.ok) throw new Error("not found");
