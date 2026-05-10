@@ -131,6 +131,15 @@
 
     <p class="meta-bar" id="meta-bar">Loading…</p>
 
+    <div class="search-wrapper">
+      <div class="search-inner">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search" placeholder="Search new listings…" autocomplete="off">
+        <button id="clear-search" aria-label="Clear search">✕</button>
+      </div>
+      <div id="search-count" class="search-count"></div>
+    </div>
+
     <div id="product-list"></div>
   </section>
 
@@ -161,6 +170,47 @@
     }
 
     const container = document.getElementById("product-list");
+    let allListings = [];   // holds the full unfiltered list once loaded
+
+    /* ── Search helpers (mirrors script.js) ── */
+    function updateSearchCount(count, isFiltered, query = "") {
+      const el = document.getElementById("search-count");
+      if (!el) return;
+      if (!isFiltered) { el.textContent = ""; return; }
+      if (count === 0) {
+        el.textContent = `No results found for "${query}"`;
+      } else {
+        el.textContent = `${count.toLocaleString()} result${count !== 1 ? "s" : ""} for "${query}"`;
+      }
+    }
+
+    function initSearch() {
+      const searchInput = document.getElementById("search");
+      const clearBtn    = document.getElementById("clear-search");
+
+      searchInput.addEventListener("input", e => {
+        const query = e.target.value.trim().toLowerCase();
+        if (!query) {
+          renderNewListings(allListings);
+          updateSearchCount(allListings.length, false);
+          return;
+        }
+        const filtered = allListings.filter(item => {
+          const title = (item.title || "").toLowerCase();
+          const body  = (item.body  || "").toLowerCase();
+          return title.includes(query) || body.includes(query);
+        });
+        renderNewListings(filtered);
+        updateSearchCount(filtered.length, true, query);
+      });
+
+      clearBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        renderNewListings(allListings);
+        updateSearchCount(allListings.length, false);
+        searchInput.focus();
+      });
+    }
 
     /* ── Render new listings
          Mirrors renderAllProducts() in script.js exactly:
@@ -271,7 +321,9 @@
         document.getElementById("meta-bar").innerHTML =
           `<strong>${count}</strong> new item${count !== 1 ? "s" : ""} added &nbsp;·&nbsp; Updated ${genDate}`;
 
-        renderNewListings(data.listings || []);
+        allListings = data.listings || [];
+        renderNewListings(allListings);
+        initSearch();
       })
       .catch(() => {
         document.getElementById("new-count-header").textContent = "Unavailable";
