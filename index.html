@@ -8,6 +8,42 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lora:ital,wght@0,400;0,500;1,400&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .site-nav {
+      background: var(--ink);
+      display: flex;
+      justify-content: center;
+      border-bottom: 1px solid rgba(184,146,42,0.25);
+    }
+    .site-nav a {
+      font-family: var(--font-body);
+      font-size: 12.5px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(248,243,232,0.7);
+      text-decoration: none;
+      padding: 10px 22px;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .site-nav a:hover,
+    .site-nav a.active {
+      color: var(--gold-light);
+      border-bottom-color: var(--gold);
+    }
+    .new-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--rust);
+      display: inline-block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+  </style>
 </head>
 <body>
 
@@ -42,6 +78,14 @@
       <span class="rule-ornament">❧</span>
     </div>
   </header>
+
+  <!-- Nav -->
+  <nav class="site-nav" aria-label="Site navigation">
+    <a href="index.html" class="active">Full Catalogue</a>
+    <a href="new-listings.html" style="display:inline-flex;align-items:center;gap:6px;">
+      <span class="new-dot"></span> New Listings
+    </a>
+  </nav>
 
   <!-- Featured Section -->
   <section class="featured-section">
