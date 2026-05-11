@@ -4,6 +4,10 @@ generate_new_listings.py
 Compares the two most-recent TradeMe CSV exports in data/
 and writes data/new_listings.json with items that appear in
 the latest CSV but not the previous one.
+
+Also writes data/catalogue_meta.json so that script.js can
+always load the latest CSV without the filename being hardcoded.
+
 Run locally or via GitHub Actions whenever a new CSV is pushed.
 """
 
@@ -14,8 +18,9 @@ import os
 import re
 from datetime import datetime, timezone
 
-DATA_DIR = "data"
+DATA_DIR  = "data"
 OUT_FILE  = os.path.join(DATA_DIR, "new_listings.json")
+META_FILE = os.path.join(DATA_DIR, "catalogue_meta.json")
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,11 +91,21 @@ def main():
         key=csv_sort_key
     )
 
+    # ── Always write catalogue_meta.json so script.js knows the latest CSV ──
+    latest_csv_name = os.path.basename(csvs[-1]) if csvs else ""
+    meta_payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "latest_csv":   latest_csv_name,
+    }
+    with open(META_FILE, "w", encoding="utf-8") as f:
+        json.dump(meta_payload, f, indent=2, ensure_ascii=False)
+    print(f"catalogue_meta.json → latest_csv: {latest_csv_name}")
+
     if len(csvs) < 2:
         print("Need at least 2 CSV files to compare. Writing empty new_listings.json.")
         payload = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "latest_csv": os.path.basename(csvs[-1]) if csvs else "",
+            "latest_csv": latest_csv_name,
             "previous_csv": "",
             "new_count": 0,
             "listings": []
