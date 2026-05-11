@@ -8,8 +8,6 @@ let featured = [];
 let expandedItems = [];
 let rotationInterval = null;
 
-const CSV_PATH = "data/ProductExportTradeMe260408_164022.csv";
-
 /* ---- Utilities ---- */
 function shuffleArray(arr) {
   const a = arr.slice();
@@ -55,75 +53,95 @@ function computeAndShowTotalStock(dataArray) {
   if (el) el.textContent = `${total.toLocaleString()} items in catalogue`;
 }
 
+/* ---- Load catalogue via meta JSON ---- */
+fetch("data/catalogue_meta.json")
+  .then(r => {
+    if (!r.ok) throw new Error("catalogue_meta.json not found");
+    return r.json();
+  })
+  .then(meta => {
+    const csvPath = "data/" + meta.latest_csv;
+    loadCatalogue(csvPath);
+  })
+  .catch(() => {
+    // catalogue_meta.json missing — show a clear error
+    const container = document.getElementById("product-list");
+    if (container) container.innerHTML = `<p class="no-results">Catalogue unavailable — catalogue_meta.json not found. Make sure generate_new_listings.py has been run at least once.</p>`;
+    const el = document.getElementById("total-stock");
+    if (el) el.textContent = "Catalogue unavailable";
+  });
+
 /* ---- Load CSV ---- */
-Papa.parse(CSV_PATH, {
-  download: true,
-  header: true,
-  complete: function(results) {
-    allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
+function loadCatalogue(csvPath) {
+  Papa.parse(csvPath, {
+    download: true,
+    header: true,
+    complete: function(results) {
+      allData = results.data.filter(item => item.title || item.body || item.start_price || item.stock_amount);
 
-    allData.forEach(item => {
-      if (item.start_price) {
-        item.start_price = parseFloat(item.start_price.toString().replace(/[^0-9.]/g, "")) || 0;
-      } else {
-        item.start_price = 0;
-      }
-      if (item.stock_amount !== undefined && item.stock_amount !== null) {
-        const s = parseFloat(String(item.stock_amount).replace(/[^0-9.-]/g, ""));
-        if (!isNaN(s)) item.stock_amount = Math.round(s);
-      }
-    });
+      allData.forEach(item => {
+        if (item.start_price) {
+          item.start_price = parseFloat(item.start_price.toString().replace(/[^0-9.]/g, "")) || 0;
+        } else {
+          item.start_price = 0;
+        }
+        if (item.stock_amount !== undefined && item.stock_amount !== null) {
+          const s = parseFloat(String(item.stock_amount).replace(/[^0-9.-]/g, ""));
+          if (!isNaN(s)) item.stock_amount = Math.round(s);
+        }
+      });
 
-    computeAndShowTotalStock(allData);
-    updateSearchCount(allData.length, false);
+      computeAndShowTotalStock(allData);
+      updateSearchCount(allData.length, false);
 
-    top300 = [...allData].sort((a, b) => b.start_price - a.start_price).slice(0, 300);
-    featured = pickRandomUniqueFrom(top300, 5);
-
-    renderFeatured();
-
-    const randomizedAllDisplay = shuffleArray(allData);
-    renderAllProducts(randomizedAllDisplay);
-
-    rotationInterval = setInterval(() => {
+      top300 = [...allData].sort((a, b) => b.start_price - a.start_price).slice(0, 300);
       featured = pickRandomUniqueFrom(top300, 5);
-      renderFeatured(true);
-    }, 30000);
 
-    const searchInput = document.getElementById("search");
-    searchInput.addEventListener("input", (e) => {
-      const query = e.target.value.trim().toLowerCase();
-      if (!query) {
+      renderFeatured();
+
+      const randomizedAllDisplay = shuffleArray(allData);
+      renderAllProducts(randomizedAllDisplay);
+
+      rotationInterval = setInterval(() => {
+        featured = pickRandomUniqueFrom(top300, 5);
+        renderFeatured(true);
+      }, 30000);
+
+      const searchInput = document.getElementById("search");
+      searchInput.addEventListener("input", (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        if (!query) {
+          const randomizedAllDisplay = shuffleArray(allData);
+          renderAllProducts(randomizedAllDisplay);
+          updateSearchCount(allData.length, false);
+          return;
+        }
+        const filtered = allData.filter(item => {
+          const title = (item.title || "").toLowerCase();
+          const body = (item.body || "").toLowerCase();
+          return title.includes(query) || body.includes(query);
+        });
+        const randomizedFiltered = shuffleArray(filtered);
+        renderAllProducts(randomizedFiltered);
+        updateSearchCount(filtered.length, true, query);
+      });
+
+      document.getElementById("clear-search").addEventListener("click", () => {
+        searchInput.value = "";
         const randomizedAllDisplay = shuffleArray(allData);
         renderAllProducts(randomizedAllDisplay);
         updateSearchCount(allData.length, false);
-        return;
-      }
-      const filtered = allData.filter(item => {
-        const title = (item.title || "").toLowerCase();
-        const body = (item.body || "").toLowerCase();
-        return title.includes(query) || body.includes(query);
+        searchInput.focus();
       });
-      const randomizedFiltered = shuffleArray(filtered);
-      renderAllProducts(randomizedFiltered);
-      updateSearchCount(filtered.length, true, query);
-    });
-
-    document.getElementById("clear-search").addEventListener("click", () => {
-      searchInput.value = "";
-      const randomizedAllDisplay = shuffleArray(allData);
-      renderAllProducts(randomizedAllDisplay);
-      updateSearchCount(allData.length, false);
-      searchInput.focus();
-    });
-  },
-  error: function() {
-    const container = document.getElementById("product-list");
-    if (container) container.innerHTML = `<p class="no-results">Could not load catalogue. Please check your data file path.</p>`;
-    const el = document.getElementById("total-stock");
-    if (el) el.textContent = "Catalogue unavailable";
-  }
-});
+    },
+    error: function() {
+      const container = document.getElementById("product-list");
+      if (container) container.innerHTML = `<p class="no-results">Could not load catalogue. Please check your data file path.</p>`;
+      const el = document.getElementById("total-stock");
+      if (el) el.textContent = "Catalogue unavailable";
+    }
+  });
+}
 
 /* ---- Search count helper ---- */
 function updateSearchCount(count, isFiltered, query = "") {
@@ -207,9 +225,6 @@ function appendExpandedItem(item) {
   renderExpandedList();
 }
 
-/* =========================
-   CHANGE #1 — CLOSE BUTTON
-   ========================= */
 function renderExpandedList() {
   const container = document.getElementById("expanded-list");
   container.innerHTML = "";
@@ -250,9 +265,6 @@ function renderExpandedList() {
   if (last) last.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-/* =========================
-   CHANGE #2 + #3
-   ========================= */
 function renderAllProducts(products) {
   const container = document.getElementById("product-list");
   container.innerHTML = "";
@@ -281,7 +293,6 @@ function renderAllProducts(products) {
         if (!isNaN(stockNum)) stock = Math.round(stockNum).toString();
       }
 
-      /* CHANGE #2 */
       div.innerHTML = `
         <h2>${escapeHtml(title)}</h2>
         <div class="truncated">${escapeHtml(truncateText(body, 220))}</div>
@@ -290,7 +301,6 @@ function renderAllProducts(products) {
         <div class="stock-right">Stock: ${escapeHtml(stock)}</div>
       `;
 
-      /* CHANGE #3 */
       div.querySelector('.show-more').addEventListener('click', () => {
         const existingPanel = div.nextElementSibling;
         if (existingPanel && existingPanel.classList.contains('catalogue-expanded-panel')) {
