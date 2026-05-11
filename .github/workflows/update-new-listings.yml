@@ -28,6 +28,6 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/new_listings.json
+          git add data/new_listings.json data/catalogue_meta.json
           git diff --staged --quiet || git commit -m "chore: update new_listings.json [skip ci]"
           git push
