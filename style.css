@@ -50,19 +50,7 @@ a:hover {
   border-bottom-color: var(--rust-light);
 }
 
-/* ---- Search analytics choice and privacy page ---- */
-.analytics-choice {
-  margin-top: 16px;
-  padding: 14px 16px;
-  border: 1px solid var(--parchment);
-  border-radius: var(--radius);
-  background: var(--cream-mid);
-  color: var(--ink-mid);
-  font-size: 13px;
-  line-height: 1.6;
-}
-.analytics-choice[hidden] { display: none; }
-.analytics-choice p { margin: 0 0 10px; }
+/* ---- Search analytics settings and privacy page ---- */
 .analytics-actions {
   display: flex;
   flex-wrap: wrap;

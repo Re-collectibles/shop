@@ -17,9 +17,10 @@
 
   function readPreference() {
     try {
-      return window.localStorage.getItem(PREFERENCE_KEY);
+      // Start automatically, while preserving any explicit opt-out.
+      return window.localStorage.getItem(PREFERENCE_KEY) === "deny" ? "deny" : "allow";
     } catch (_) {
-      return null; // Browsing and searching still work when storage is blocked.
+      return "allow"; // Browsing and searching still work when storage is blocked.
     }
   }
 
@@ -42,12 +43,11 @@
     window.dataLayer = window.dataLayer || [];
     window.gtag = gtag;
     gtag("consent", "default", {
-      analytics_storage: "denied",
+      analytics_storage: "granted",
       ad_storage: "denied",
       ad_user_data: "denied",
       ad_personalization: "denied"
     });
-    gtag("consent", "update", { analytics_storage: "granted" });
     gtag("js", new Date());
     gtag("config", MEASUREMENT_ID, {
       send_page_view: false,
@@ -99,13 +99,11 @@
   }
 
   function renderPreference() {
-    const notice = document.getElementById("analytics-choice");
-    if (notice) notice.hidden = preference === "allow" || preference === "deny";
     const status = document.getElementById("analytics-status");
     if (status) {
       status.textContent = preference === "allow"
-        ? "Search analytics are allowed on this browser."
-        : "Search analytics are off on this browser.";
+        ? "Search analytics are enabled in this browser."
+        : "Search analytics are disabled in this browser.";
     }
   }
 

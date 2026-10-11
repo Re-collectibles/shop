@@ -16,7 +16,6 @@ function setup({ choice = null, host = 're-collectibles.github.io', storageBlock
   const scripts = [];
   const cookies = [];
   const listeners = {};
-  const notice = { hidden: true };
   const status = {};
   const buttons = {};
   for (const choice of ['allow', 'deny']) {
@@ -30,7 +29,7 @@ function setup({ choice = null, host = 're-collectibles.github.io', storageBlock
     head: { appendChild: script => scripts.push(script) },
     createElement: () => ({}),
     querySelectorAll: () => Object.values(buttons),
-    getElementById: id => id === 'analytics-choice' ? notice : status,
+    getElementById: id => id === 'analytics-status' ? status : null,
     set cookie(value) { cookies.push(value); }
   };
   const window = {
@@ -46,7 +45,7 @@ function setup({ choice = null, host = 're-collectibles.github.io', storageBlock
   };
   vm.runInNewContext(source, { window, document, Date, String, Number });
   return {
-    window, scripts, cookies, notice, status,
+    window, scripts, cookies, status,
     tracker: section => window.ShopAnalytics.createSearchTracker(section),
     choose: choice => buttons[choice].click(),
     tick(ms) {
@@ -62,20 +61,34 @@ function setup({ choice = null, host = 're-collectibles.github.io', storageBlock
   };
 }
 
-test('no Google tag or search events before permission; decline leaves search analytics off', () => {
+test('new visitors record searches automatically without clicking Allow', () => {
   const app = setup();
-  assert.equal(app.notice.hidden, false);
+  assert.equal(app.scripts.length, 1);
+  assert.equal(app.window[disableKey], false);
+  assert.match(app.status.textContent, /enabled/);
+  assert.equal(app.events().length, 0);
+  const tracker = app.tracker('full_catalogue');
+  tracker.schedule('railway', 8);
+  app.tick(2000);
+  assert.equal(app.events().length, 1);
+  assert.equal(app.events()[0][2].search_term, 'railway');
+  assert.equal(app.events()[0][2].result_count, 8);
+});
+
+test('a saved opt-out prevents the Google tag and search events until switched on', () => {
+  const app = setup({ choice: 'deny' });
   const tracker = app.tracker('full_catalogue');
   tracker.schedule('railway', 8);
   app.tick(2000);
   assert.equal(app.scripts.length, 0);
   assert.equal(app.events().length, 0);
-  app.choose('deny');
+  assert.equal(app.window[disableKey], true);
+  assert.match(app.status.textContent, /disabled/);
+  app.choose('allow');
+  assert.equal(app.scripts.length, 1);
   tracker.schedule('railway', 8);
   tracker.flush();
-  assert.equal(app.scripts.length, 0);
-  assert.equal(app.window[disableKey], true);
-  assert.equal(app.notice.hidden, true);
+  assert.equal(app.events().length, 1);
 });
 
 test('consent config uses correct ID, no ads, clean page URL, and only one tag', () => {
@@ -85,6 +98,7 @@ test('consent config uses correct ID, no ads, clean page URL, and only one tag',
   assert.equal(app.scripts.length, 1);
   assert.equal(app.scripts[0].src, 'https://www.googletagmanager.com/gtag/js?id=G-82MNWE7W34');
   const defaults = app.messages().find(args => args[0] === 'consent' && args[1] === 'default')[2];
+  assert.equal(defaults.analytics_storage, 'granted');
   assert.equal(defaults.ad_storage, 'denied');
   assert.equal(defaults.ad_user_data, 'denied');
   assert.equal(defaults.ad_personalization, 'denied');
@@ -177,8 +191,8 @@ test('turning analytics off cancels pending and queued events and removes shop c
   assert.equal(app.events().length, 0);
 });
 
-test('permission in a second tab enables recording; refusal in that tab stops it', () => {
-  const app = setup();
+test('settings in a second tab enable or stop recording; clearing settings restores automatic tracking', () => {
+  const app = setup({ choice: 'deny' });
   const tracker = app.tracker('full_catalogue');
   app.externalChoice('allow');
   assert.equal(app.scripts.length, 1);
@@ -187,11 +201,16 @@ test('permission in a second tab enables recording; refusal in that tab stops it
   app.tick(1500);
   assert.equal(app.events().length, 0);
   assert.equal(app.window[disableKey], true);
+  app.externalChoice(null);
+  assert.equal(app.window[disableKey], false);
+  tracker.schedule('another book', 2);
+  tracker.flush();
+  assert.equal(app.events().length, 1);
+  assert.equal(app.scripts.length, 1);
 });
 
 test('storage failures and a blocked Google tag do not throw or accumulate events', () => {
   const app = setup({ storageBlocked: true });
-  app.choose('allow');
   assert.equal(app.scripts.length, 1);
   const tracker = app.tracker('full_catalogue');
   tracker.schedule('book', 1);
