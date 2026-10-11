@@ -50,6 +50,45 @@ a:hover {
   border-bottom-color: var(--rust-light);
 }
 
+/* ---- Search analytics choice and privacy page ---- */
+.analytics-choice {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--parchment);
+  border-radius: var(--radius);
+  background: var(--cream-mid);
+  color: var(--ink-mid);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.analytics-choice[hidden] { display: none; }
+.analytics-choice p { margin: 0 0 10px; }
+.analytics-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.analytics-actions button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1px solid var(--ink-light);
+  border-radius: var(--radius);
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.analytics-actions button:hover { background: var(--parchment); }
+.analytics-actions button:focus-visible,
+.analytics-actions a:focus-visible { outline: 2px solid var(--rust); outline-offset: 3px; }
+.privacy-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 36px 20px 60px;
+  line-height: 1.8;
+}
+.privacy-page h1, .privacy-page h2 { font-family: var(--font-display); }
+
 /* ---- Header ---- */
 .top-header {
   background: var(--ink);

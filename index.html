@@ -124,6 +124,14 @@
         <button id="clear-search" aria-label="Clear search">✕</button>
       </div>
       <div id="search-count" class="search-count"></div>
+      <div id="analytics-choice" class="analytics-choice" hidden>
+        <p>Help us choose books to list. Allow Google Analytics cookies to record your searches and the number of matches?</p>
+        <div class="analytics-actions">
+          <button type="button" data-analytics-choice="allow">Allow</button>
+          <button type="button" data-analytics-choice="deny">No thanks</button>
+          <a href="privacy.html">Privacy &amp; search settings</a>
+        </div>
+      </div>
     </div>
 
     <div id="product-list"></div>
@@ -134,9 +142,11 @@
     <div class="footer-ornament">❦</div>
     <p>Re-collectibles Bookshop &amp; More · Whanganui, New Zealand</p>
     <p><a href="mailto:malcparknz@gmail.com">malcparknz@gmail.com</a></p>
+    <p><a href="privacy.html">Privacy &amp; search settings</a></p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="analytics.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
