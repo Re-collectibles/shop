@@ -1,5 +1,7 @@
 # Re-collectibles Book Shop – Updating Product Catalog
 
+For search reports, see [Seeing what people search for](SEARCH_ANALYTICS.md). It explains how to verify Google Analytics and save reports of popular searches and searches with no results.
+
 This guide explains how to update your website with new TradeMe product exports using GitHub.  
 
 ---
@@ -50,4 +52,3 @@ After editing files or uploading a new CSV, click **Commit changes**.
 
 
 > After committing, your changes will immediately appear on the live GitHub Pages site (after a few seconds).
-

@@ -138,6 +138,14 @@
         <button id="clear-search" aria-label="Clear search">✕</button>
       </div>
       <div id="search-count" class="search-count"></div>
+      <div id="analytics-choice" class="analytics-choice" hidden>
+        <p>Help us choose books to list. Allow Google Analytics cookies to record your searches and the number of matches?</p>
+        <div class="analytics-actions">
+          <button type="button" data-analytics-choice="allow">Allow</button>
+          <button type="button" data-analytics-choice="deny">No thanks</button>
+          <a href="privacy.html">Privacy &amp; search settings</a>
+        </div>
+      </div>
     </div>
 
     <div id="product-list"></div>
@@ -148,8 +156,10 @@
     <div class="footer-ornament">❦</div>
     <p>Re-collectibles Bookshop &amp; More · Whanganui, New Zealand</p>
     <p><a href="mailto:malcparknz@gmail.com">malcparknz@gmail.com</a></p>
+    <p><a href="privacy.html">Privacy &amp; search settings</a></p>
   </footer>
 
+  <script src="analytics.js"></script>
   <script>
     /* ── Utilities (identical to script.js) ── */
     function escapeHtml(str) {
@@ -187,10 +197,12 @@
     function initSearch() {
       const searchInput = document.getElementById("search");
       const clearBtn    = document.getElementById("clear-search");
+      const searchTracker = window.ShopAnalytics?.createSearchTracker("new_listings");
 
       searchInput.addEventListener("input", e => {
         const query = e.target.value.trim().toLowerCase();
         if (!query) {
+          searchTracker?.cancel();
           renderNewListings(allListings);
           updateSearchCount(allListings.length, false);
           return;
@@ -202,9 +214,15 @@
         });
         renderNewListings(filtered);
         updateSearchCount(filtered.length, true, query);
+        searchTracker?.schedule(query, filtered.length);
+      });
+
+      searchInput.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.isComposing) searchTracker?.flush();
       });
 
       clearBtn.addEventListener("click", () => {
+        searchTracker?.cancel();
         searchInput.value = "";
         renderNewListings(allListings);
         updateSearchCount(allListings.length, false);

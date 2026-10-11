@@ -108,9 +108,11 @@ function loadCatalogue(csvPath) {
       }, 30000);
 
       const searchInput = document.getElementById("search");
+      const searchTracker = window.ShopAnalytics?.createSearchTracker("full_catalogue");
       searchInput.addEventListener("input", (e) => {
         const query = e.target.value.trim().toLowerCase();
         if (!query) {
+          searchTracker?.cancel();
           const randomizedAllDisplay = shuffleArray(allData);
           renderAllProducts(randomizedAllDisplay);
           updateSearchCount(allData.length, false);
@@ -124,9 +126,15 @@ function loadCatalogue(csvPath) {
         const randomizedFiltered = shuffleArray(filtered);
         renderAllProducts(randomizedFiltered);
         updateSearchCount(filtered.length, true, query);
+        searchTracker?.schedule(query, filtered.length);
+      });
+
+      searchInput.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.isComposing) searchTracker?.flush();
       });
 
       document.getElementById("clear-search").addEventListener("click", () => {
+        searchTracker?.cancel();
         searchInput.value = "";
         const randomizedAllDisplay = shuffleArray(allData);
         renderAllProducts(randomizedAllDisplay);
